@@ -6,11 +6,11 @@ Critical | High | Moderate | Low | Planning
 </priority>
 
 # Change Request assignee
-<assignee>
+<assignedto>
 
 szabolcsit@hu.ibm.com
 
-</assignee>
+</assignedto>
 
 # Configuration Item
 <system>
@@ -37,9 +37,9 @@ _Write down what this Change Implementation will impact_
 
 # Backout Plan
 
-<backout>
+<backoutplan>
 
 Reverting to the previous image version.
 
-</backout>
+</backoutplan>
 
