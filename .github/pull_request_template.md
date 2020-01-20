@@ -15,7 +15,7 @@ szabolcsit@hu.ibm.com
 # Configuration Item
 <system>
 
-cocoa-example-app
+cocoa-sandbox
 
 </system>
 
