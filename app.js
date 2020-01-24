@@ -23,5 +23,4 @@ app.get('/', function (req, res) {
 
 app.listen(PORT);
 
-// comment before unapproved PR
 console.log('Application running on port: ' + PORT);
