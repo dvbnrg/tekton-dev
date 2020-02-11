@@ -12,5 +12,8 @@
     "validator": "*",
     "jquery": "*",
     "request-json": "*"
+  },
+  "scripts": {
+     "test": "exit 0"
   }
 }
