@@ -14,6 +14,6 @@
     "request-json": "*"
   },
   "scripts": {
-     "test": "exit 0"
+     "test": "exit 1"
   }
 }
