@@ -1,4 +1,5 @@
 # Priority
+<!-- Select the priority of this change -->
 <priority>
 
 Critical | High | Moderate | Low | Planning
@@ -6,6 +7,7 @@ Critical | High | Moderate | Low | Planning
 </priority>
 
 # Change Request assignee
+<!-- The person's email who will be assigned to the Change Request in ServiceNow -->
 <assignedto>
 
 szabolcsit@hu.ibm.com
@@ -13,33 +15,43 @@ szabolcsit@hu.ibm.com
 </assignedto>
 
 # Configuration Item
+<!-- The changed service name exactly as registered in ServiceNow -->
 <system>
 
 cocoa-sandbox
 
 </system>
 
-# Purpose/Goal
+# Additional Description
+<!-- Some description of the change, implementation steps -->
+<!-- This field will be appended with the commit messages of the content of the PR, -->
+<!-- and any PR description that was included since the last PR into this branch -->
+<description>
+  
+  _PROVIDE INFORMATION_
+  
+</description>
 
+# Purpose/Goal
+<!-- Write the reason of why the change is needed -->
 <purpose>
 
-_Write a description of why the change is needed_
+  _PROVIDE INFORMATION_
 
 </purpose>
 
 # Explanation of Impact
-
+<!-- Write down what this Change Implementation will impact -->
 <impact>
 
-_Write down what this Change Implementation will impact_
+  _PROVIDE INFORMATION_
 
 </impact>
 
 # Backout Plan
-
+<!-- Write some details how the change will be rolled back in case of a failure -->
 <backoutplan>
 
-Reverting to the previous image version.
+  Reverting to the previous image version.
 
 </backoutplan>
-
