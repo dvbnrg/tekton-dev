@@ -24,7 +24,3 @@ app.get('/', function (req, res) {
 app.listen(PORT);
 // test
 console.log('Application running on port: ' + PORT);
-// test
-// test
-// test
-// test
