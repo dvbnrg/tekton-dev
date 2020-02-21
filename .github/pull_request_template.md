@@ -47,10 +47,3 @@ szabolcsit@hu.ibm.com
   Reverting to the previous image version.
 
 </backoutplan>
-
-# System
-<system>
-
-  continuous compliance
-
-</system>
