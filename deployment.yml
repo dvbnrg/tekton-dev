@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cocoa-example-app
+  name: hello-compliance-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: cocoa-example-app
+      app: hello-compliance-app
   template:
     metadata:
       labels:
-        app: cocoa-example-app
+        app: hello-compliance-app
     spec:
       containers:
-      - name: cocoa-example-app
+      - name: hello-compliance-app
         image: webapp:1
         # for local development against minikube registry
         #imagePullPolicy: Never        
@@ -33,4 +33,4 @@ spec:
     - port: 80
   # label keys and values that must match in order to receive traffic for this service
   selector:
-    app: cocoa-example-app
+    app: hello-compliance-app
