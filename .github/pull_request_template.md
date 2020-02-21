@@ -14,14 +14,6 @@ szabolcsit@hu.ibm.com
 
 </assignedto>
 
-# Configuration Item
-<!-- The changed service name exactly as registered in ServiceNow -->
-<system>
-
-cocoa-sandbox
-
-</system>
-
 # Additional Description
 <!-- Some description of the change, implementation steps -->
 <!-- This field will be appended with the commit messages of the content of the PR, -->
