@@ -23,7 +23,7 @@ export REGISTRY_URL=us.icr.io
 echo "=========================================================="
 echo "CHECKING DEPLOYMENT.YML manifest"
 #Update deployment.yml with image name
-if [ -z "${DEPLOYMENT_FILE}" ]; then DEPLOYMENT_FILE=deployment.yaml ; fi
+if [ -z "${DEPLOYMENT_FILE}" ]; then DEPLOYMENT_FILE=deployment.yml ; fi
 if [ ! -f ${DEPLOYMENT_FILE} ]; then
     echo -e "${red}Kubernetes deployment file '${DEPLOYMENT_FILE}' not found${no_color}"
     exit 1
