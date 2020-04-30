@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-compliance-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-compliance-app
+  template:
+    metadata:
+      labels:
+        app: hello-compliance-app
+    spec:
+      containers:
+      - name: hello-compliance-app
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        image: webapp:1
+        # for local development against minikube registry
+        #imagePullPolicy: Never        
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+  labels:
+    app: hello-service
+spec:
+  type: NodePort
+  ports:
+    # the port that this service should serve on
+    - port: 80
+  # label keys and values that must match in order to receive traffic for this service
+  selector:
+    app: hello-compliance-app
