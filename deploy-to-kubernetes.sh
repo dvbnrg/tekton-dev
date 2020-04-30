@@ -25,7 +25,7 @@ echo "CLUSTER_NAMESPACE=${CLUSTER_NAMESPACE}"
 echo "=========================================================="
 echo "DEPLOYING using manifest"
 echo -e "Updating ${DEPLOYMENT_FILE} with image name: ${IMAGE}"
-if [ -z "${DEPLOYMENT_FILE}" ]; then DEPLOYMENT_FILE=deployment.yml ; fi
+if [ -z "${DEPLOYMENT_FILE}" ]; then DEPLOYMENT_FILE=deployment.yaml ; fi
 if [ -f ${DEPLOYMENT_FILE} ]; then
     sed -i "s~^\([[:blank:]]*\)image:.*$~\1image: ${IMAGE}~" ${DEPLOYMENT_FILE}
     cat ${DEPLOYMENT_FILE}
