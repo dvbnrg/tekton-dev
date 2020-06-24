@@ -10,7 +10,7 @@ Critical | High | Moderate | Low | Planning
 <!-- The person's email who will be assigned to the Change Request in ServiceNow -->
 <assignedto>
 
-szabolcsit@hu.ibm.com
+  _PROVIDE INFORMATION_
 
 </assignedto>
 
