@@ -19,9 +19,9 @@ Critical | High | Moderate | Low | Planning
 <!-- This field will be appended with the commit messages of the content of the PR, -->
 <!-- and any PR description that was included since the last PR into this branch -->
 <description>
-  
+
   _PROVIDE INFORMATION_
-  
+
 </description>
 
 # Purpose/Goal
@@ -44,6 +44,6 @@ Critical | High | Moderate | Low | Planning
 <!-- Write some details how the change will be rolled back in case of a failure -->
 <backoutplan>
 
-  Reverting to the previous image version.
+  Revert to the previous release.
 
 </backoutplan>
