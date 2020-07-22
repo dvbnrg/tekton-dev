@@ -7,7 +7,9 @@ Critical | High | Moderate | Low | Planning
 </priority>
 
 # Change Request assignee
-<!-- The person's email who will be assigned to the Change Request in ServiceNow -->
+<!-- The functional ID or the person's email who will be assigned to the Change Request in ServiceNow -->
+<!-- Both of them need access to the ServiceNow -->
+<!-- Note: This is not the approver of the Change Request -->
 <assignedto>
 
   _PROVIDE INFORMATION_
