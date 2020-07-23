@@ -14,7 +14,11 @@
     "should": "13.2.3",
     "validator": "13.1.1"
   },
+  "devDependencies" : {
+    "axios": "^0.19.2"
+  },
   "scripts": {
-    "test": "jest test"
+    "test": "jest ./test",
+    "acceptance-test": "jest ./acceptance-test"
   }
 }
