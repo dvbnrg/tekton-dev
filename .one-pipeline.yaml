@@ -1,0 +1,32 @@
+version: '1'
+
+setup:
+  image: ibmcom/pipeline-base-image:2.7
+  script: |
+    #!/usr/bin/env bash
+
+    npm ci
+
+test:
+  image: ibmcom/pipeline-base-image:2.7
+  script: |
+    #!/usr/bin/env bash
+
+    npm test
+
+deploy:
+  image: ibmcom/pipeline-base-image:2.6
+  script: |
+    #!/usr/bin/env bash
+
+    source scripts/setup_deploy.sh
+    source scripts/deploy.sh
+
+acceptance-test:
+  image: ibmcom/pipeline-base-image:2.7
+  script: |
+    #!/usr/bin/env bash
+
+    source /root/.nvm/nvm.sh
+    export APP_URL=$(cat ../app-url)
+    npm run acceptance-test
