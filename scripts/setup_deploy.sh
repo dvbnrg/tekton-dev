@@ -16,6 +16,7 @@ if [ -f /config/dev-region ]; then
   IBMCLOUD_IKS_REGION="$(cat /config/dev-region)"
   IBMCLOUD_IKS_CLUSTER_NAMESPACE="$(cat /config/dev-cluster-namespace)"
 fi
+IBMCLOUD_IKS_REGION=$(echo "${IBMCLOUD_IKS_REGION}" | awk -F ":" '{print $NF}')
 
 IBMCLOUD_IKS_CLUSTER_NAME="$(cat /config/cluster-name)"
 REGISTRY_URL="$(cat /config/image | awk -F/ '{print $1}')"
