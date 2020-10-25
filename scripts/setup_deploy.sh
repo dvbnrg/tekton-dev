@@ -1,7 +1,5 @@
 #!/usr/bin/bash
 
-set -ex
-
 export IBMCLOUD_API_KEY
 export IBMCLOUD_IKS_REGION
 export IBMCLOUD_IKS_CLUSTER_NAME
