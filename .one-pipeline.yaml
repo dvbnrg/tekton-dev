@@ -14,6 +14,21 @@ test:
 
     npm test
 
+containerize:
+  dind: true
+  image: ibmcom/pipeline-base-image:2.6
+  script: |
+    #!/usr/bin/env bash
+
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+
+    source scripts/build_setup.sh
+    source scripts/build.sh
+
 deploy:
   image: ibmcom/pipeline-base-image:2.6
   script: |
@@ -25,7 +40,7 @@ deploy:
       set -x
     fi
 
-    source scripts/setup_deploy.sh
+    source scripts/deploy_setup.sh
     source scripts/deploy.sh
 
 acceptance-test:

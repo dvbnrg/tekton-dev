@@ -1,8 +1,4 @@
-#!/usr/bin/bash
-
-IBMCLOUD_IKS_REGION=$(echo "${IBMCLOUD_IKS_REGION}" | awk -F ":" '{print $NF}')
-ibmcloud login -r "$IBMCLOUD_IKS_REGION"
-eval "$(ibmcloud ks cluster config --cluster "$IBMCLOUD_IKS_CLUSTER_NAME" --export)"
+#!/usr/bin/env bash
 
 if kubectl get namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE"; then
   echo "Namespace ${IBMCLOUD_IKS_CLUSTER_NAMESPACE} found!"
@@ -13,14 +9,41 @@ fi
 if kubectl get secret -n "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" "$IMAGE_PULL_SECRET_NAME"; then
   echo "Image pull secret ${IMAGE_PULL_SECRET_NAME} found!"
 else
-  kubectl create secret docker-registry \
-    --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" \
-    --docker-server "$REGISTRY_URL" \
-    --docker-password "$IBMCLOUD_API_KEY" \
-    --docker-username iamapikey \
-    --docker-email ibm@example.com \
-    "$IMAGE_PULL_SECRET_NAME"
+  if [[ "$BREAK_GLASS" == true ]]; then
+    kubectl create -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: $IMAGE_PULL_SECRET_NAME
+  namespace: $IBMCLOUD_IKS_CLUSTER_NAMESPACE
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: $(jq .parameters.docker_config_json /config/artifactory)
+EOF
+  else
+    kubectl create secret docker-registry \
+      --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" \
+      --docker-server "$REGISTRY_URL" \
+      --docker-password "$IBMCLOUD_API_KEY" \
+      --docker-username iamapikey \
+      --docker-email ibm@example.com \
+      "$IMAGE_PULL_SECRET_NAME"
+  fi
+fi
 
+if kubectl get serviceaccount -o json default --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" | jq -e 'has("imagePullSecrets")'; then
+  if kubectl get serviceaccount -o json default --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" | jq --arg name "$IMAGE_PULL_SECRET_NAME" -e '.imagePullSecrets[] | select(.name == $name)'; then
+    echo "Image pull secret $IMAGE_PULL_SECRET_NAME found in $IBMCLOUD_IKS_CLUSTER_NAMESPACE"
+  else
+    echo "Adding image pull secret $IMAGE_PULL_SECRET_NAME to $IBMCLOUD_IKS_CLUSTER_NAMESPACE"
+    kubectl patch serviceaccount \
+      --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" \
+      --type json \
+      --patch '[{"op": "add", "path": "/imagePullSecrets/-", "value": {"name": "'"$IMAGE_PULL_SECRET_NAME"'"}}]' \
+      default
+  fi
+else
+  echo "Adding image pull secret $IMAGE_PULL_SECRET_NAME to $IBMCLOUD_IKS_CLUSTER_NAMESPACE"
   kubectl patch serviceaccount \
     --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" \
     --patch '{"imagePullSecrets":[{"name":"'"$IMAGE_PULL_SECRET_NAME"'"}]}' \
@@ -47,7 +70,7 @@ if [ "$status" = failure ]; then
   exit 1
 fi
 
-IP_ADDRESS=$(ibmcloud ks workers --cluster "$IBMCLOUD_IKS_CLUSTER_NAME" --json | jq -r '[.[] | select(.state=="normal")][0].publicIP')
+IP_ADDRESS=$(kubectl get nodes -o json | jq -r '[.items[] | .status.addresses[] | select(.type == "ExternalIP") | .address] | .[0]')
 PORT=$(kubectl get service -n  "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" "$service_name" -o json | jq -r '.spec.ports[0].nodePort')
 
 echo "Application URL: http://${IP_ADDRESS}:${PORT}"

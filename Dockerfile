@@ -15,10 +15,7 @@
 FROM node:alpine
 
 RUN apk update && apk upgrade
-# Install the application
-ADD package.json /app/package.json
-RUN cd /app && npm install
-ADD app.js /app/app.js
+ADD . /app
 ENV WEB_PORT 80
 EXPOSE  80
 
