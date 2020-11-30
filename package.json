@@ -9,6 +9,7 @@
     "jest": "^26.4.2"
   },
   "scripts": {
+    "start": "node app.js",
     "test": "jest ./test",
     "acceptance-test": "jest ./acceptance-test"
   },

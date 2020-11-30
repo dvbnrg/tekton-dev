@@ -23,9 +23,9 @@ spec:
             cpu: "500m"
         image: webapp:1
         # for local development against minikube registry
-        #imagePullPolicy: Never        
+        # imagePullPolicy: Never
         ports:
-        - containerPort: 80
+        - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
@@ -37,7 +37,7 @@ spec:
   type: NodePort
   ports:
     # the port that this service should serve on
-    - port: 80
+    - port: 8080
   # label keys and values that must match in order to receive traffic for this service
   selector:
     app: hello-compliance-app
