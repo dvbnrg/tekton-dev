@@ -8,6 +8,7 @@ setup:
     npm ci
 
 test:
+  abort_on_failure: false
   image: ibmcom/pipeline-base-image:2.7
   script: |
     #!/usr/bin/env bash
