@@ -1,28 +1,5 @@
 #!/usr/bin/env bash
 
-# get creds from toolchain json
-
-ARTIFACTORY_CREDS="$(cat /config/artifactory-dockerconfigjson | base64 -d)"
-PASSWORD=$(echo $ARTIFACTORY_CREDS | jq -r '.[] | .[] | .password')
-USERNAME=$(echo $ARTIFACTORY_CREDS | jq -r '.[] | .[] | .username')
-COCOA_REGISTRY="na.artifactory.swg-devops.com/artifactory/api/npm/wcp-compliance-automation-team-npm-local"
-
-#
-# update .npmrc
-#
-
-echo "@cocoa:registry=https://${COCOA_REGISTRY}/" >> "$HOME/.npmrc"
-
-curl -u "${USERNAME}:${PASSWORD}" https://na.artifactory.swg-devops.com/artifactory/api/npm/auth \
-    | sed "s#^#//${COCOA_REGISTRY}/:#g" \
-    >> "$HOME/.npmrc"
-
-#
-# install cocoa CLI
-#
-
-npm i -g @cocoa/scripts
-
 #
 # prepare data
 #
@@ -45,6 +22,9 @@ export APP_REPO_NAME=${APP_REPO_NAME%.git}
 
 ARTIFACT="https://raw.github.ibm.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/deployment.yml"
 
+IMAGE_ARTIFACT="$(cat /config/artifact)"
+SIGNATURE="$(cat /config/signature)"
+APP_ARTIFACTS='{ "signature": "'${SIGNATURE}'", "provenance": "'${IMAGE_ARTIFACT}'" }'
 #
 # add to inventory
 #
@@ -57,3 +37,13 @@ cocoa inventory add \
     --pipeline-run-id="${PIPELINE_RUN_ID}" \
     --version="$(cat /config/version)" \
     --name="${APP_NAME}_deployment"
+
+cocoa inventory add \
+    --artifact="${IMAGE_ARTIFACT}" \
+    --repository-url="${APP_REPO}" \
+    --commit-sha="${COMMIT_SHA}" \
+    --build-number="${BUILD_NUMBER}" \
+    --pipeline-run-id="${PIPELINE_RUN_ID}" \
+    --version="$(cat /config/version)" \
+    --name="${APP_NAME}" \
+    --app-artifacts="${APP_ARTIFACTS}"
