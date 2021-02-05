@@ -24,7 +24,14 @@ ARTIFACT="https://raw.github.ibm.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_S
 
 IMAGE_ARTIFACT="$(cat /config/artifact)"
 SIGNATURE="$(cat /config/signature)"
-APP_ARTIFACTS='{ "signature": "'${SIGNATURE}'", "provenance": "'${IMAGE_ARTIFACT}'" }'
+set +e
+TAG="$(cat /config/custom-image-tag)"
+set -e
+if [[ "${TAG}" ]]; then
+    APP_ARTIFACTS='{ "signature": "'${SIGNATURE}'", "provenance": "'${IMAGE_ARTIFACT}'", "tag": "'${TAG}'" }'
+else
+    APP_ARTIFACTS='{ "signature": "'${SIGNATURE}'", "provenance": "'${IMAGE_ARTIFACT}'" }'
+fi
 #
 # add to inventory
 #
