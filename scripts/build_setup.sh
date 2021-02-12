@@ -35,7 +35,14 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 apt-get update && apt-get install docker-ce-cli
 
-IMAGE_NAME="$(cat /config/app-name)"
+set +e
+REPOSITORY="$(cat /config/repository)"
+set -e
+if [[ "${REPOSITORY}" ]]; then
+  IMAGE_NAME=$(basename $REPOSITORY .git)
+else
+  IMAGE_NAME="$(cat /config/app-name)"
+fi
 IMAGE_TAG="$(date +%Y%m%d%H%M%S)-$(cat /config/git-branch)-$(cat /config/git-commit)"
 
 BREAK_GLASS=$(cat /config/break_glass || true)

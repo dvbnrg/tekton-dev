@@ -14,19 +14,27 @@ export GHE_ORG=${GHE_ORG##*/}
 GHE_REPO=${INVENTORY_REPO##*/}
 export GHE_REPO=${GHE_REPO%.git}
 
+set +e
+    REPOSITORY="$(cat /config/repository)"
+    TAG="$(cat /config/custom-image-tag)"
+set -e
+
 export APP_REPO="$(cat /config/repository-url)"
 APP_REPO_ORG=${APP_REPO%/*}
 export APP_REPO_ORG=${APP_REPO_ORG##*/}
-APP_REPO_NAME=${APP_REPO##*/}
-export APP_REPO_NAME=${APP_REPO_NAME%.git}
+
+if [[ "${REPOSITORY}" ]]; then
+    export APP_REPO_NAME=$(basename $REPOSITORY .git)
+    APP_NAME=$APP_REPO_NAME
+else
+    APP_REPO_NAME=${APP_REPO##*/}
+    export APP_REPO_NAME=${APP_REPO_NAME%.git}
+fi
 
 ARTIFACT="https://raw.github.ibm.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/deployment.yml"
 
 IMAGE_ARTIFACT="$(cat /config/artifact)"
 SIGNATURE="$(cat /config/signature)"
-set +e
-TAG="$(cat /config/custom-image-tag)"
-set -e
 if [[ "${TAG}" ]]; then
     APP_ARTIFACTS='{ "signature": "'${SIGNATURE}'", "provenance": "'${IMAGE_ARTIFACT}'", "tag": "'${TAG}'" }'
 else
