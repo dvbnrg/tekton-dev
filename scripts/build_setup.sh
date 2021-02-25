@@ -47,7 +47,7 @@ IMAGE_TAG="$(date +%Y%m%d%H%M%S)-$(cat /config/git-branch)-$(cat /config/git-com
 
 BREAK_GLASS=$(cat /config/break_glass || true)
 
-if [[ "$BREAK_GLASS" == "true" ]]; then
+if [[ -n "$BREAK_GLASS" ]]; then
   ARTIFACTORY_URL="$(jq -r .parameters.repository_url /config/artifactory)"
   ARTIFACTORY_REGISTRY="$(sed -E 's~https://(.*)/?~\1~' <<<"$ARTIFACTORY_URL")"
   ARTIFACTORY_INTEGRATION_ID="$(jq -r .instance_id /config/artifactory)"

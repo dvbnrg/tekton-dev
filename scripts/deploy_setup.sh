@@ -27,7 +27,7 @@ IMAGE="$(cat /config/image)"
 IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${IBMCLOUD_TOOLCHAIN_ID}-${REGISTRY_URL}"
 BREAK_GLASS=$(cat /config/break_glass || echo false)
 
-if [[ "$BREAK_GLASS" == true ]]; then
+if [[ -n "$BREAK_GLASS" ]]; then
   export KUBECONFIG
   KUBECONFIG=/config/cluster-cert
 else
