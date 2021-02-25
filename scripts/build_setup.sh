@@ -45,7 +45,7 @@ else
 fi
 IMAGE_TAG="$(date +%Y%m%d%H%M%S)-$(cat /config/git-branch)-$(cat /config/git-commit)"
 
-BREAK_GLASS=$(cat /config/break_glass || true)
+BREAK_GLASS=$(cat /config/break_glass || echo "")
 
 if [[ -n "$BREAK_GLASS" ]]; then
   ARTIFACTORY_URL="$(jq -r .parameters.repository_url /config/artifactory)"
