@@ -27,4 +27,6 @@ echo -n $(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE" | awk -F@ 
 echo -n "$IMAGE_TAG" > ../image-tags
 echo -n "$IMAGE" > ../image
 
-save_artifact app-image type=image "name=${IMAGE}"
+if which save_artifact >/dev/null; then
+  save_artifact app-image type=image "name=${IMAGE}"
+fi
