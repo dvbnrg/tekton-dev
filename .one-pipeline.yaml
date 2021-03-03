@@ -62,6 +62,7 @@ acceptance-test:
     npm run acceptance-test
 
 release:
+  abort_on_failure: false
   image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/ibm-compliance-automation:1.2.4@sha256:dc98cc52c0caede42149c08727147520e30e81fee543b8dd5939b45d06baa142
   script: |
     #!/usr/bin/env bash
