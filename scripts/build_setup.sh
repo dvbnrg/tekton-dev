@@ -21,6 +21,9 @@ get-icr-region() {
     ibm:yp:jp-tok)
       echo jp
       ;;
+    ibm:yp:jp-osa)
+      echo jp2
+      ;;
     ibm:yp:au-syd)
       echo au
       ;;
@@ -31,9 +34,9 @@ get-icr-region() {
   esac
 }
 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-apt-get update && apt-get install docker-ce-cli
+# curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+# add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+# apt-get update && apt-get install docker-ce-cli
 
 set +e
 REPOSITORY="$(cat /config/repository)"

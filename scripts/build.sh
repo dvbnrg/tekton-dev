@@ -2,8 +2,9 @@
 
 set -euo pipefail
 
-DOCKER_BUILDKIT=1 docker build $DOCKER_BUILD_ARGS .
-docker push "$IMAGE"
+#cDOCKER_BUILDKIT=1 docker build $DOCKER_BUILD_ARGS .
+docker build $DOCKER_BUILD_ARGS .
+docker push "${IMAGE}"
 
 #optional tag
 set +e

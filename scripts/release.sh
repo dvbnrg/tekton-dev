@@ -51,7 +51,7 @@ cocoa inventory add \
     --build-number="${BUILD_NUMBER}" \
     --pipeline-run-id="${PIPELINE_RUN_ID}" \
     --version="$(cat /config/version)" \
-    --name="${APP_NAME}_deployment"
+    --name="${APP_REPO_NAME}_deployment"
 
 cocoa inventory add \
     --artifact="${IMAGE_ARTIFACT}" \
@@ -60,5 +60,5 @@ cocoa inventory add \
     --build-number="${BUILD_NUMBER}" \
     --pipeline-run-id="${PIPELINE_RUN_ID}" \
     --version="$(cat /config/version)" \
-    --name="${APP_NAME}" \
+    --name="${APP_REPO_NAME}" \
     --app-artifacts="${APP_ARTIFACTS}"
