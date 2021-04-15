@@ -27,11 +27,18 @@ IMAGE="$(cat /config/image)"
 IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${IBMCLOUD_TOOLCHAIN_ID}-${REGISTRY_URL}"
 BREAK_GLASS=$(cat /config/break_glass || echo "")
 
-if [[ -n "$BREAK_GLASS" ]]; then
+if [[ -n "${BREAK_GLASS}" ]]; then
   export KUBECONFIG
   KUBECONFIG=/config/cluster-cert
 else
   IBMCLOUD_IKS_REGION=$(echo "${IBMCLOUD_IKS_REGION}" | awk -F ":" '{print $NF}')
-  ibmcloud login -r "$IBMCLOUD_IKS_REGION"
-  ibmcloud ks cluster config --cluster "$IBMCLOUD_IKS_CLUSTER_NAME"
+  ibmcloud login -r "${IBMCLOUD_IKS_REGION}"
+  ibmcloud ks cluster config --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}"
+
+  ibmcloud ks cluster get --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}" --json > "${IBMCLOUD_IKS_CLUSTER_NAME}.json"
+  # If the target cluster is openshift then make the appropriate additional login with oc tool
+  if which oc > /dev/null && jq -e '.type=="openshift"' "${IBMCLOUD_IKS_CLUSTER_NAME}.json" > /dev/null; then
+    echo "${IBMCLOUD_IKS_CLUSTER_NAME} is an openshift cluster. Doing the appropriate oc login to target it"
+    oc login -u apikey -p "${IBMCLOUD_API_KEY}"
+  fi
 fi
