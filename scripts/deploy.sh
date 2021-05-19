@@ -67,7 +67,9 @@ kubectl get events --sort-by=.metadata.creationTimestamp -n "$IBMCLOUD_IKS_CLUST
 
 if [ "$status" = failure ]; then
   echo "Deployment failed"
-  ibmcloud cr quota
+  if [[ -z "$BREAK_GLASS" ]]; then
+    ibmcloud cr quota
+  fi
   exit 1
 fi
 
