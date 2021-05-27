@@ -5,13 +5,7 @@ setup:
   script: |
     #!/usr/bin/env bash
 
-    GH_TOKEN=$(cat "$WORKSPACE/git-token")
-    OWNER=$(jq -r '.services[] | select(.toolchain_binding.name=="app-repo") | .parameters.owner_id' /toolchain/toolchain.json)
-    REPO=$(jq -r '.services[] | select(.toolchain_binding.name=="app-repo") | .parameters.repo_name' /toolchain/toolchain.json)
-
-    curl -u ":$GH_TOKEN" https://github.ibm.com/api/v3/repos/$OWNER/$REPO/branches/master/protection -XPUT -d '{"required_pull_request_reviews":{"dismiss_stale_reviews":true},"required_status_checks":{"strict":true,"contexts":["tekton/code-branch-protection","tekton/code-unit-tests","tekton/code-cis-check","tekton/code-vulnerability-scan","tekton/code-detect-secrets"]},"enforce_admins":null,"restrictions":null}'
-
-    npm ci
+    echo "Please insert any required pre-build tasks in this stage."
 
 test:
   abort_on_failure: false
@@ -51,6 +45,17 @@ deploy:
 
     source scripts/deploy_setup.sh
     source scripts/deploy.sh
+
+sign-artifact:
+  abort_on_failure: false
+  image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/csso-image-sign:1.0.0@sha256:cb22e6ad6b3469155719f6bf09bde641208a1e349e5ccc09407204bb069f7b4e
+  script: |
+      #!/usr/bin/env bash
+      STAGE_DIND="true"
+      STAGE_ABORT_ON_FAILURE="false"
+      STAGE_IMAGE_PULL_POLICY="IfNotPresent"
+
+      source scripts/sign_image.sh
 
 acceptance-test:
   abort_on_failure: false
