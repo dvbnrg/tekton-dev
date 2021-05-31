@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 
 #
-# prepare data
+# prepare data for the release step. Here we upload all the metadata to the Inventory Repo.
+# If you want to add any information or artifact to the inventory repo then use the "cocoa inventory add command"
 #
 
-export GHE_TOKEN="$(cat ../git-token)"
+if [ "$SCM_TYPE" == "gitlab" ]; then
+  GITLAB_TOKEN="$(cat ../git-token)"
+  GITLAB_URL="$SCM_API_URL"
+  export GITLAB_TOKEN
+  export GITLAB_URL
+else
+  GHE_TOKEN="$(cat ../git-token)"
+  export GHE_TOKEN
+fi
+
 export COMMIT_SHA="$(cat /config/git-commit)"
 export APP_NAME="$(cat /config/app-name)"
 
@@ -51,7 +61,8 @@ cocoa inventory add \
     --build-number="${BUILD_NUMBER}" \
     --pipeline-run-id="${PIPELINE_RUN_ID}" \
     --version="$(cat /config/version)" \
-    --name="${APP_REPO_NAME}_deployment"
+    --name="${APP_REPO_NAME}_deployment" \
+    --git-provider="${SCM_TYPE}"
 
 cocoa inventory add \
     --artifact="${IMAGE_ARTIFACT}" \
@@ -61,4 +72,5 @@ cocoa inventory add \
     --pipeline-run-id="${PIPELINE_RUN_ID}" \
     --version="$(cat /config/version)" \
     --name="${APP_REPO_NAME}" \
-    --app-artifacts="${APP_ARTIFACTS}"
+    --app-artifacts="${APP_ARTIFACTS}" \
+    --git-provider="${SCM_TYPE}"

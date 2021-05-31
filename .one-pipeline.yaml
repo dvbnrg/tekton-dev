@@ -70,7 +70,7 @@ acceptance-test:
 
 release:
   abort_on_failure: false
-  image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/ibm-compliance-automation:1.2.4@sha256:dc98cc52c0caede42149c08727147520e30e81fee543b8dd5939b45d06baa142
+  image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/compliance-baseimage:2.21.0@sha256:64f524611b8e0693b7548ec8144d223de5baeb07c46de12dee8bb896d36de6f3
   script: |
     #!/usr/bin/env bash
 
