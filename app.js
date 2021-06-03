@@ -18,7 +18,7 @@ var PORT = 8080;
 
 var app = express();
 app.get('/', function (req, res) {
-  res.send('Welcome to IBM Cloud DevOps with Tekton (built with the COCOA pipeline). Let\'s go use the Continuous Delivery Service. yay \o/');
+  res.send('Welcome to IBM Cloud DevOps with Tekton using DevSecOps best practices. Let\'s go use the Continuous Delivery Service.');
 });
 
 app.listen(PORT);
