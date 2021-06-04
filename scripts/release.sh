@@ -41,7 +41,13 @@ else
     export APP_REPO_NAME=${APP_REPO_NAME%.git}
 fi
 
-ARTIFACT="https://raw.github.ibm.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/deployment.yml"
+if [ "$SCM_TYPE" == "gitlab" ]; then
+    id=$(curl --header "PRIVATE-TOKEN: ${GITLAB_TOKEN}" ${SCM_API_URL}/projects/${APP_REPO_ORG}%2F${APP_REPO_NAME} | jq .id)
+    ARTIFACT="${SCM_API_URL}/projects/${id}/repository/files/deployment.yml/raw?ref=${COMMIT_SHA}"
+else
+    ARTIFACT="https://raw.github.ibm.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/deployment.yml"
+fi
+
 
 IMAGE_ARTIFACT="$(cat /config/artifact)"
 SIGNATURE="$(cat /config/signature)"
