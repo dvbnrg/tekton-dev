@@ -48,7 +48,7 @@ deploy:
 
 sign-artifact:
   abort_on_failure: false
-  image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0
+  image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0@sha256:e9d8e354668ba3d40be2aaee08298d2aa7f0e1c8a1829cca4094ec93830e3e6a
   script: |
       #!/usr/bin/env bash
       STAGE_DIND="true"
@@ -70,7 +70,7 @@ acceptance-test:
 
 release:
   abort_on_failure: false
-  image: icr.io/continuous-delivery/pipeline/pipeline-compliance-image:2.24.0
+  image: icr.io/continuous-delivery/pipeline/pipeline-compliance-image:2.24.0@sha256:0b96b23fd36183297f62b2458a9a02a2655bc39c19bfe3ff0d48544ad450d83a
   script: |
     #!/usr/bin/env bash
 
