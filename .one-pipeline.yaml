@@ -48,7 +48,7 @@ deploy:
 
 sign-artifact:
   abort_on_failure: false
-  image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/csso-image-sign:1.0.0@sha256:cb22e6ad6b3469155719f6bf09bde641208a1e349e5ccc09407204bb069f7b4e
+  image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0
   script: |
       #!/usr/bin/env bash
       STAGE_DIND="true"
@@ -70,7 +70,7 @@ acceptance-test:
 
 release:
   abort_on_failure: false
-  image: wcp-compliance-automation-team-docker-local.artifactory.swg-devops.com/compliance-baseimage:2.21.0@sha256:64f524611b8e0693b7548ec8144d223de5baeb07c46de12dee8bb896d36de6f3
+  image: icr.io/continuous-delivery/pipeline/pipeline-compliance-image:2.24.0
   script: |
     #!/usr/bin/env bash
 
