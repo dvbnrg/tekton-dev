@@ -70,7 +70,7 @@ acceptance-test:
 
 release:
   abort_on_failure: false
-  image: icr.io/continuous-delivery/pipeline/pipeline-compliance-image:2.24.0@sha256:0b96b23fd36183297f62b2458a9a02a2655bc39c19bfe3ff0d48544ad450d83a
+  image: icr.io/continuous-delivery/toolchains/devsecops/compliance-baseimage:2.26.1@sha256:a780174a64474187b01b5e40a1721d8307f02897ac6f3eba2d482d4f4926edf1
   script: |
     #!/usr/bin/env bash
 
