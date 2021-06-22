@@ -1,4 +1,4 @@
-# files to be ignore
+# files to be ignored
 .idea/
 .env
 node_modules
