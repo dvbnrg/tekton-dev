@@ -5,4 +5,4 @@ A simple node application that can be deployed with [CI-toolchain](https://cloud
 
 ## Documentation and troubleshooting guideline:
 
-Can be found [here](https://cloud.ibm.com/docs/ContinuousDelivery?topic=ContinuousDelivery-troubleshoot-devsecops)
+Can be found [here](https://cloud.ibm.com/docs/ContinuousDelivery?topic=ContinuousDelivery-troubleshoot-devsecops).
