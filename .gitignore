@@ -1,5 +1,3 @@
-# files to be ignored
-.idea/
-.env
 node_modules
-.vscode/
+.DS_store
+.vscode

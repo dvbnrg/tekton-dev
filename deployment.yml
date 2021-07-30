@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-compliance-app
+  name: node-compliance-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hello-compliance-app
+      app: node-compliance-app
   template:
     metadata:
       labels:
-        app: hello-compliance-app
+        app: node-compliance-app
     spec:
       containers:
-      - name: hello-compliance-app
+      - name: node-compliance-app
         resources:
           requests:
             memory: "64Mi"
@@ -40,4 +40,4 @@ spec:
     - port: 8080
   # label keys and values that must match in order to receive traffic for this service
   selector:
-    app: hello-compliance-app
+    app: node-compliance-app
