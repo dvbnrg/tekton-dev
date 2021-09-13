@@ -20,6 +20,7 @@
     "morgan": "~1.9.1"
   },
   "devDependencies": {
+    "ansi-regex": "^6.0.1",
     "axios": "^0.21.3",
     "mpath": "^0.8.4"
   }
