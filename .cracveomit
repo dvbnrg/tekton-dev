@@ -1,0 +1,6 @@
+[
+      {
+        "cve": "SNYK-JS-ANSIREGEX-1583908",
+        "alwaysOmit": true
+      }
+  ]
