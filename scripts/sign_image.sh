@@ -5,13 +5,30 @@ export IMAGE_SIGN_DIR
 export USE_PIPELINECTL="true"
 
 IBM_CLOUD_API_KEY="$(cat /config/ibmcloud-api-key)"
-VAULT_SECRET="$(cat /config/vault-secret)"
+VAULT_SECRET="$(cat /config/signing-key)"
 SIGNATURE_FILE="${WORKSPACE}/artifact-signature"
 IMAGE_SIGN_DIR="${WORKSPACE}/__image_sign__"
 
 mkdir -p "${IMAGE_SIGN_DIR}"
 artifact_list="${IMAGE_SIGN_DIR}/images_for_image_sign"
 touch "$artifact_list"
+
+function import_gpg_key() {
+  
+  set -e 
+
+  yum install pinentry -y
+  base64 -d <<< "${VAULT_SECRET}" >private_key.txt
+  if [[ -s private_key.txt ]]; then 
+    echo "Base64 Conversion is successful...."
+  else 
+    echo "Base64 Conversion is unsuccessful. Please check the key."
+    exit 1  
+  fi 
+
+  gpg2 --import private_key.txt
+
+}
 
 #
 # if pipelinectl's list_artifacts and load_artifact are available,
@@ -50,17 +67,15 @@ export SECRET_PATH="/config/ibmcloud-api-key"
 source "${ONE_PIPELINE_PATH}/tools/retry"
 
 echo "Proceeding with self signing...."  
- 
-yum install pinentry -y
-base64 -d <<< "${VAULT_SECRET}" >private_key.txt
-if [[ -s private_key.txt ]]; then 
-    echo "Base64 Conversion is successful...."
-else 
-    echo "Base64 Conversion is unsuccessful. Please check the key."
-    exit 1  
-fi 
 
-gpg2 --import private_key.txt
+
+if import_gpg_key; then
+    echo "GPG key import is successfull."
+else
+    echo "GPG key import failed. Please provide GPG key without passpharse."
+    exit 1
+fi
+
 gpg2 --list-signatures
 KEYS=$(gpg2 -k --with-colons)
 TRIMMEDKEYS=$(echo "$KEYS" | tr -d '\n')
