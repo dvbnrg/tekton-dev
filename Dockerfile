@@ -9,8 +9,10 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-FROM registry.access.redhat.com/ubi8/nodejs-14
+FROM node:latest
 USER 0
+# remove the mysql configuration file as is not being used by the app
+RUN rm -r /etc/mysql/
 RUN npm -v
 ENV PORT 8080
 WORKDIR /usr/src/app
