@@ -5,7 +5,7 @@ setup:
   script: |
     #!/usr/bin/env bash
 
-    echo "Please insert any required pre-build tasks in this stage."
+    source scripts/code_setup.sh
 
 test:
   abort_on_failure: false
@@ -24,7 +24,7 @@ static-scan:
   script: |
     #!/usr/bin/env bash
     if [ -z "$(get_env opt-in-sonar "")" ]; then
-      echo "This stage is a beta stage. If you want to enable it, add 'opt-in-sonar' parameter to your pipeline with any value." >&2
+      echo "If you want to enable this stage, add 'opt-in-sonar' parameter to your pipeline with any value." >&2
     else
       chmod 777 scripts/sonarqube/sonarqube_run
       scripts/sonarqube/sonarqube_run
