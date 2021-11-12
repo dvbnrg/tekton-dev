@@ -27,6 +27,12 @@ get-icr-region() {
     ibm:yp:au-syd)
       echo au
       ;;
+    ibm:yp:br-sao)
+      echo br
+      ;;
+    ibm:yp:eu-fr2)
+      echo fr2
+      ;;
     *)
       echo "Unknown region: $1" >&2
       exit 1

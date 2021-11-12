@@ -123,6 +123,8 @@ find_registry_region() {
       export REGISTRY_REGION="eu-fr2"
     elif [ "$REGISTRY_REGION" == "ca" ]; then
       export REGISTRY_REGION="ca-tor"
+    elif [ "$REGISTRY_REGION" == "br" ]; then
+      export REGISTRY_REGION="br-sao"
     else
       echo "No IBM Cloud Container Registry region found for the registry url $1"
       exit 1
