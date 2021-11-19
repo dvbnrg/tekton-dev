@@ -9,8 +9,7 @@
 # an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
 # specific language governing permissions and limitations under the License.
 
-FROM node:latest
-USER 0
+FROM node:17
 # remove the mysql configuration file as is not being used by the app
 RUN rm -r /etc/mysql/
 RUN npm -v
