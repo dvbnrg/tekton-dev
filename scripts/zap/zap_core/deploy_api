@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+clusterLogin
+
+setupNamespace
+
+getAPIDeploymentFile
+
+# This block can be removed if zap images get public ICR hosting. Pull secret wont be required
+# FIND_ICR=$(echo "${ZAP_API_IMAGE}" | grep "${ICR_PATTERN}")
+# if [ "${FIND_ICR}" ]; then
+#   setPullSecret "${ZAP_API_IMAGE}"
+# fi
+echo "=========================================================="
+echo "UPDATING manifest with image information"
+echo -e "Updating ${DEPLOYMENT_FILE} with image name: ${ZAP_API_IMAGE}"
+# find the yaml document index for the K8S deployment definition
+DEPLOYMENT_DOC_INDEX=$(yq read --doc "*" --tojson "$DEPLOYMENT_FILE" | jq -r 'to_entries | .[] | select(.value.kind | ascii_downcase=="deployment") | .key')
+if [ -z "${DEPLOYMENT_DOC_INDEX}" ]; then
+  echo "No Kubernetes Deployment definition found in ${DEPLOYMENT_FILE}. Updating YAML document with index 0"
+  DEPLOYMENT_DOC_INDEX=0
+fi
+
+DEPLOY_FILE="deploy.yml"
+yq read --doc "${DEPLOYMENT_DOC_INDEX}" "${DEPLOYMENT_FILE}" > "${DEPLOY_FILE}"
+# Update deployment with image name
+cp "${DEPLOY_FILE}" "${DEPLOY_FILE}.bak"
+cat < "${DEPLOY_FILE}.bak" \
+  | yq write - "metadata.name" "${ZAP_DEPLOYMENT_NAME}" \
+  | yq write - "spec.template.spec.containers[0].image" "${ZAP_API_IMAGE}" \
+  > "${DEPLOY_FILE}"
+DEPLOYMENT_FILE="${DEPLOY_FILE}" # use modified file
+
+deploy

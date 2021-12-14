@@ -15,17 +15,29 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const helmet = require('helmet')
 
 const indexRouter = require('./routes/index');
 const flightBookingRouter = require('./routes/flights');
 
 const app = express();
+app.use(helmet.hidePoweredBy());
+app.use(helmet.frameguard());
+app.use(helmet.noSniff());
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "script-src": ["'self'", "unpkg.com"]
+    },
+  })
+);
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(session({ secret: 'work hard', saveUninitialized: true, resave: true }));
+app.use(session({ secret: 'work hard', saveUninitialized: true, resave: true, cookie : { sameSite: 'strict' } }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());

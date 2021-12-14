@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+. "${ONE_PIPELINE_PATH}"/internal/stage/link
+link_pipelinectl
+
+export ZAP_SCRIPTS_DIR
+export REPORT
+ZIP_FILE="uiscripts.zip"
+API_DATA_FILE="api_data.json"
+
+# The path to the directory containing the base set of scripts for running the Zap scans
+ZAP_SCRIPTS_DIR="${WORKSPACE}/$(get_env zap-core-scripts "")"
+source "${ZAP_SCRIPTS_DIR}"/setup
+source "${ZAP_SCRIPTS_DIR}"/zap_support
+
+export REPORTFILE
+REPORTFILE="owasp-zap_result"
+
+#check the status of the zap scan and poll until results are available
+report() {
+  echo "CHECK REPORTS"
+  MESSAGE="IN_PROGRESS"
+  STATUS=""
+  while [[ "${MESSAGE}" == "IN_PROGRESS" ]]
+  do
+      sleep "${POLLING_INTERVAL}"
+      echo "Checking status"
+      STATUS=$(curl -X GET "${ZAP_BASE_URL}"/status)
+      MESSAGE=$(echo "${STATUS}" | jq -r .scan_status)
+      echo "${STATUS}"
+  done
+
+  echo "SCAN COMPLETE. STATUS MESSAGE: ${MESSAGE}"
+  
+  if [[ "${MESSAGE}" == "COMPLETED" ]]; then
+      FILTER='{"alertsSeverityFilter" : "'$FILTER_OPTIONS'"}'
+      echo "filtor options $FILTER"
+      REPORT=$(curl -X GET "${ZAP_BASE_URL}"/report)
+      curl -X GET -H "Content-type: application/json" -d "${FILTER}" "${ZAP_BASE_URL}"/report -o "${REPORTFILE}"
+      source "${ZAP_SCRIPTS_DIR}"/report
+  else
+      echo "Please see zap scanner logs for more details"
+  fi
+}
+
+#update the swagger definition wrapper with details for authenication details if required
+#and process custom modification of data by user provided script
+prepareData() {
+  if [[ "${CUSTOM_API_SCRIPT_PATH}" ]]; then
+    echo "Running API custom scripts"
+    . "${CUSTOM_API_SCRIPT_PATH}"
+  fi
+  if [ "${PIPELINE_DEBUG}" = "1" ]; then
+    pwd
+    env
+    trap env EXIT
+    set -x
+    cat "${API_DATA_FILE}"
+  fi
+
+  cat "${API_DATA_FILE}" | jq --arg server "${TARGET_APPLICATION_SERVER_URL}" '.server = $server' > api_data_temp.json
+  mv api_data_temp.json "${API_DATA_FILE}"
+  if [[ "$TARGET_API_KEY" && "$IAM_ENDPOINT" ]]; then
+      cat "${API_DATA_FILE}" | jq --arg key "${TARGET_API_KEY}" '.apiKey = $key' > api_data_temp.json
+      mv api_data_temp.json "${API_DATA_FILE}"
+      cat "${API_DATA_FILE}" | jq --arg iamendpoint "${IAM_ENDPOINT}" '.iamTokenUrl = $iamendpoint' > api_data_temp.json
+      mv api_data_temp.json "${API_DATA_FILE}"
+  fi
+}
+
+prepareUIData() {
+  #extract file name
+  CUSTOM_SCRIPT_NAME=$(basename -- "$CUSTOM_UI_SCRIPT_PATH")
+  STARTING_DIR=$(pwd)
+  
+  cd "${UI_SCRIPTS_DIR}" || exit
+  #copy customisation script into ui scripts directory
+  if [[ "${CUSTOM_UI_SCRIPT_PATH}" ]]; then
+    echo "Running UI custom scripts"
+    #run the customisation script, remove it
+    cp "${CUSTOM_UI_SCRIPT_PATH}" ./
+    . "${CUSTOM_SCRIPT_NAME}"
+    rm "${CUSTOM_SCRIPT_NAME}"
+  else 
+    echo "No UI custom scripts found"
+  fi
+  
+  #prepare directory structure for scan => uiscripts.zip/uiscripts/files
+  mkdir /tmp/uiscripts
+  cp ./* /tmp/uiscripts
+  cd /tmp || exit
+  zip -r "${ZIP_FILE}" uiscripts/*
+  cd "${STARTING_DIR}" || exit
+  unzip -l "/tmp/${ZIP_FILE}" > temp.txt
+  cat temp.txt
+
+  if [ "${PIPELINE_DEBUG}" = "1" ]; then
+    pwd
+    env
+    trap env EXIT
+    set -x
+    ls
+    unzip -l "/tmp/${ZIP_FILE}" > temp.txt
+    cat temp.txt
+    cat ${CONTEXT_FILE}
+  fi
+}
+
+showContainerLogs() {
+  if [ "${SHOW_CONTAINER_LOGS}" = "true" ]; then
+    echo "Tailing container log..."
+    local container
+    if [ "${RUN_UI_SCAN}" = "true" ]; then
+      container="${ZAP_UI_DEPLOYMENT}"
+    else 
+      container="${ZAP_API_DEPLOYMENT}"
+    fi
+    local containerId="$(docker inspect --format="{{.Id}}" "${container}")"
+    docker logs -f "${containerId}" &
+  fi
+  if [ "${SHOW_ZAP_LOGS}" = "true" ]; then
+    echo "Tailing ZAP log..."
+    if [ "${RUN_UI_SCAN}" = "true" ]; then
+      # UI scans run ZAP in a separate proxy container
+      local containerId="$(docker inspect --format="{{.Id}}" "${ZAP_PROXY_SERVICE_NAME}")"
+      # ZAP scanner outputs to stdout
+      docker logs -f "${containerId}" &
+      # node app outputs to nohup.out
+      local logFile="/zap/nohup.out"
+      docker exec "${containerId}" touch "${logFile}" # ensure it exists before tailing
+      docker exec "${containerId}" tail -f -n +1 "${logFile}" &
+    else
+      # API scans run ZAP in the main container and log to a file
+      local containerId="$(docker inspect --format="{{.Id}}" "${ZAP_API_DEPLOYMENT}")"
+      local logFile="/zap/security-advisor-api-dynamic-scans/src/zap.out"
+      docker exec "${containerId}" touch "${logFile}" # ensure it exists before tailing
+      docker exec "${containerId}" tail -f -n +1 "${logFile}" &
+    fi
+  fi
+}
+
+uiScan() {
+  echo "Initiating UI scan"
+  if [[ "${UI_SCRIPTS_DIR}" ]]; then
+    prepareUIData
+    echo "TARGET ${TARGET_APPLICATION_SERVER_URL}"
+    echo "ZAP_BASE_URL ${ZAP_BASE_URL}"
+    showContainerLogs
+    curl -F "TARGET_URL=${TARGET_APPLICATION_SERVER_URL}" -F "uiscripts=@/tmp/${ZIP_FILE}" -F "custom-context=@${CONTEXT_FILE}" "${ZAP_BASE_URL}"/scan
+    rm -rf /tmp/${ZIP_FILE}
+    report
+  else
+    echo "No E2E UI scripts found"
+  fi
+}
+
+apiScan() {
+  echo "Initiating API scan"
+    #expecting comma separated definitions
+  #DEFINITION_PATHS is path within the repository containing the json definitions
+  showContainerLogs
+  IFS=',' read -ra tokens <<< "${DEFINITION_PATHS}"
+  for i in "${!tokens[@]}"
+  do
+    #trim whitespace
+    DEFINITION_FILE=$(echo "${tokens[i]}" | xargs echo -n)
+    cp "${DEFINITION_FILE}" "${API_DATA_FILE}"
+    prepareData
+    if [ "${PIPELINE_DEBUG}" = "1" ]; then
+      echo "PRINTING JSON DATA"
+      cat "${API_DATA_FILE}"
+    fi
+    echo "PREPARING TO INIT SCAN"
+    curl -X POST -H "Content-Type: application/json" -d @"${API_DATA_FILE}" "${ZAP_BASE_URL}"/scan
+    report
+    rm "${API_DATA_FILE}"
+    sleep 60
+  done
+}
+
+if [ "${TARGET_APPLICATION_SERVER_URL}" ]; then
+  echo "Targeting ${TARGET_APPLICATION_SERVER_URL} for scans"
+else
+  echo "No Target Server found. Exiting"
+  exit 1
+fi
+
+if [ "${RUN_INLINE}" = "true" ]; then
+  source "${ZAP_SCRIPTS_DIR}"/setup_zap_dind
+else
+  if [ "${RUN_UI_SCAN}" = "true" ]; then
+    echo "Deploying Zap UI Pod"
+    source "${ZAP_SCRIPTS_DIR}"/deploy_ui
+  else
+    echo "Deploying Zap Api Pod"
+    source "${ZAP_SCRIPTS_DIR}"/deploy_api
+  fi
+fi
+echo  "ZAP_BASE_URL ${ZAP_BASE_URL}"
+if [ "${RUN_UI_SCAN}" = "true" ]; then
+  uiScan
+else
+  apiScan
+fi
+
+tearDown

@@ -12,8 +12,10 @@
  */
 
 const express = require('express');
+const helmet = require('helmet');
 
 const router = express.Router();
+router.use(helmet.frameguard({ action: 'SAMEORIGIN' }));
 
 function logincheck(req, res, next) {
     if (req.session && req.session.userEmail) {

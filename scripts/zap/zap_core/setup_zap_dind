@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+echo "starting dind"
+DOCKER_TLS_VERIFY=1
+
+# This block can be removed if zap images get public ICR hosting. Pull secret wont be required
+# FIND_ICR=$(echo "${ZAP_API_IMAGE}" | grep "${ICR_PATTERN}")
+# if [ "${FIND_ICR}" ]; then
+#     REGION_PREFIX=${ZAP_API_IMAGE%.icr.io*}
+#     ICR="${REGION_PREFIX}.icr.io"
+#     echo "${IBMCLOUD_API_KEY}" | docker login -u iamapikey --password-stdin "${ICR}"
+# fi
+
+if [ "${RUN_UI_SCAN}" = "true" ]; then
+    echo "Stepping up UI container"
+    docker run -d -t -p 8080:8080  --name "${ZAP_PROXY_SERVICE_NAME}" "${ZAP_PROXY_IMAGE}"
+    docker network create zap-network
+    until [ "`docker inspect -f {{.State.Running}} ${ZAP_PROXY_SERVICE_NAME}`"=="true" ]; do
+        echo "Waiting for container to start"
+        sleep 1s;
+    done;
+    ZAP_PROXY_VALUE=$(docker inspect "${ZAP_PROXY_SERVICE_NAME}" | jq -r '.[].NetworkSettings.Networks.bridge.IPAddress')
+    echo ZAP_PROXY="http://${ZAP_PROXY_VALUE}:8080" > ui-envs.txt
+    echo ZAP_PROXY_NODE_API="http://${ZAP_PROXY_VALUE}:3000" >> ui-envs.txt
+    cat ui-envs.txt
+
+    docker run -d -t -p 9080:9080 --env-file ui-envs.txt  --name "${ZAP_UI_DEPLOYMENT}" "${ZAP_UI_IMAGE}"
+    until [ "`docker inspect -f {{.State.Running}} ${ZAP_UI_DEPLOYMENT}`"=="true" ]; do
+        echo "Waiting for container to start"
+        sleep 1s;
+    done;
+    docker network connect zap-network "${ZAP_PROXY_SERVICE_NAME}"
+    docker network connect zap-network "${ZAP_UI_DEPLOYMENT}"
+    docker ps
+    sleep 60s
+    ZAP_BASE_URL="http://localhost:9080"
+else
+    # step up zap api container
+    echo "Stepping up API container"
+    echo "ZAP_API_IMAGE ${ZAP_API_IMAGE}"
+    docker run -d -t -p 9080:9080 --name "${ZAP_API_DEPLOYMENT}" "${ZAP_API_IMAGE}"
+    until [ "`docker inspect -f {{.State.Running}} ${ZAP_API_DEPLOYMENT}`"=="true" ]; do
+        echo "Waiting for container to start"
+        sleep 1s;
+    done;
+    echo "Container ready"
+    docker ps
+    ZAP_BASE_URL="http://localhost:9080"
+fi  

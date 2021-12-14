@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+. "${ONE_PIPELINE_PATH}"/tools/retry
+
+export ZAP_PORT
+export ZAP_BASE_URL
+if [ "${RUN_UI_SCAN}" = "true" ]; then
+  ZAP_DEPLOYMENT_NAME="${ZAP_UI_DEPLOYMENT}"
+  ZAP_PORT="${ZAP_UI_PORT}"
+else
+  ZAP_DEPLOYMENT_NAME="${ZAP_API_DEPLOYMENT}"
+  ZAP_PORT="${ZAP_API_PORT}"
+fi
+
+if [ "${PIPELINE_DEBUG}" = "1" ]; then
+  pwd
+  env
+  trap env EXIT
+  set -x
+  echo "KUBERNETES_SERVICE_ACCOUNT_NAME=${KUBERNETES_SERVICE_ACCOUNT_NAME}"
+  echo "IBMCLOUD_API ${IBMCLOUD_API}"
+  echo "ZAP_UI_IMAGE ${ZAP_UI_IMAGE}"
+  echo "ZAP_API_IMAGE ${ZAP_API_IMAGE}"
+  echo "ZAP_PROXY_IMAGE ${ZAP_PROXY_IMAGE}"
+  echo "PIPELINE_TOOLCHAIN_ID $PIPELINE_TOOLCHAIN_ID "
+  echo "ZAP_CLUSTER_NAMESPACE=${ZAP_CLUSTER_NAMESPACE}"
+  echo "IBMCLOUD_IKS_CLUSTER_NAME $IBMCLOUD_IKS_CLUSTER_NAME"
+  echo "RUN_UI_SCAN ${RUN_UI_SCAN}"
+  echo "ZAP_API_DEPLOYMENT ${ZAP_API_DEPLOYMENT}"
+  echo "ZAP_UI_DEPLOYMENT ${ZAP_UI_DEPLOYMENT}"
+  echo "DEPLOYMENT_FILE ${DEPLOYMENT_FILE}"
+  echo "RUN_INLINE ${RUN_INLINE}"
+fi
+
+tearDown() {
+  if [ "${RUN_INLINE}" = "true" ]; then
+    if [ "${RUN_UI_SCAN}" = "true" ]; then
+      docker stop "${ZAP_UI_DEPLOYMENT}"
+      docker stop "${ZAP_PROXY_SERVICE_NAME}"
+    else
+      # step up zap api container
+      echo "stopping zap api container"
+      docker stop "${ZAP_API_DEPLOYMENT}"
+    fi
+  else
+    echo "Running clean up"
+    kubectl delete deployment "${ZAP_DEPLOYMENT_NAME}" -n "${ZAP_CLUSTER_NAMESPACE}"
+  fi
+}
+
+clusterLogin() {
+  retry 5 2 \
+  ibmcloud login -a "${IBMCLOUD_API}" --apikey "${IBMCLOUD_API_KEY}" --no-region
+
+  retry 5 2 \
+  ibmcloud ks cluster config --cluster "$IBMCLOUD_IKS_CLUSTER_NAME"
+
+  ibmcloud ks cluster get --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}" --json > "${IBMCLOUD_IKS_CLUSTER_NAME}.json"
+  # If the target cluster is openshift then make the appropriate additional login with oc tool
+  if which oc > /dev/null && jq -e '.type=="openshift"' "${IBMCLOUD_IKS_CLUSTER_NAME}.json" > /dev/null; then
+    echo "${IBMCLOUD_IKS_CLUSTER_NAME} is an openshift cluster. Doing the appropriate oc login to target it"
+    oc login -u apikey -p "${IBMCLOUD_API_KEY}"
+  fi
+  # Use kubectl auth to check if the kubectl client configuration is appropriate
+  # check if the current configuration can create a deployment in the target namespace
+  echo "Check ability to create a kubernetes deployment in ${ZAP_CLUSTER_NAMESPACE} using kubectl CLI"
+  retry 5 2 \
+  kubectl auth can-i create deployment --namespace "${ZAP_CLUSTER_NAMESPACE}"
+}
+
+setupNamespace() {
+  #Check cluster availability
+  echo "=========================================================="
+  echo "CHECKING CLUSTER readiness and namespace existence"
+  echo "Configuring cluster namespace"
+  if kubectl get namespace "${ZAP_CLUSTER_NAMESPACE}"; then
+    echo -e "Namespace ${ZAP_CLUSTER_NAMESPACE} found."
+  else
+    kubectl create namespace "${ZAP_CLUSTER_NAMESPACE}"
+    echo -e "Namespace ${ZAP_CLUSTER_NAMESPACE} created."
+  fi
+}
+
+#waits for Pod status = Running. This is check when we can apply port forwarding
+waitForPod() {
+  local podName=$1
+  local STATUS=$(kubectl get pods -n "${ZAP_CLUSTER_NAMESPACE}" | grep "${podName}" |  awk 'FNR == 1 {print $3}')
+  if [ "${STATUS}" = "Running" ]; then
+    echo "Pod ready."
+  else
+    echo "Waiting for Pod. Status: ${STATUS}"
+    return 1
+  fi
+}
+
+deploy() {
+  echo "=========================================================="
+  echo "DEPLOYING using manifest"
+  cat "${DEPLOYMENT_FILE}"
+  kubectl apply --namespace "${ZAP_CLUSTER_NAMESPACE}" -f "${DEPLOYMENT_FILE}"
+
+  #wait for deployment to complete
+  kubectl wait --for=condition=available --timeout=600s deployment  "${ZAP_DEPLOYMENT_NAME}" -n "${ZAP_CLUSTER_NAMESPACE}"
+
+  #wait for pod running status
+  retry 20 10 \
+    waitForPod "${ZAP_DEPLOYMENT_NAME}"
+
+  #wait for container running status
+  if [ "${RUN_UI_SCAN}" = "true" ]; then
+    targetPod=$(kubectl get pods -n zap --selector app=zapui |  awk 'FNR == 2 {print $1}')
+    echo "targetPod ${targetPod}"
+    CONTAINER_STATE=""
+    while [ "${CONTAINER_STATE}" != "running" ]
+    do
+        echo "check container"
+        sleep 10s
+        CONTAINER_STATE=$(kubectl get pod -n zap "${targetPod}" -o json | jq -r '.status.containerStatuses | .[] | select(.name=="zap-ui-scanner-proxy") | .state | keys[0]')
+        echo "CONTAINER_STATE zap-ui-scanner-proxy ${CONTAINER_STATE}"
+    done
+
+    CONTAINER_STATE=""
+    while [ "${CONTAINER_STATE}" != "running" ]
+    do
+        echo "check container"
+        sleep 10s
+        CONTAINER_STATE=$(kubectl get pod -n zap "${targetPod}" -o json | jq -r '.status.containerStatuses | .[] | select(.name=="zap-ui-scanner-service-v2") | .state | keys[0]')
+        echo "CONTAINER_STATE zap-ui-scanner-service-v2 ${CONTAINER_STATE}"
+    done
+  else
+    targetPod=$(kubectl get pods -n zap --selector app=zapapi |  awk 'FNR == 2 {print $1}')
+    echo "targetPod ${targetPod}"
+    CONTAINER_STATE=""
+    while [ "${CONTAINER_STATE}" != "running" ]
+    do
+        echo "check container"
+        sleep 10s
+        CONTAINER_STATE=$(kubectl get pod -n zap "${targetPod}" -o json | jq -r '.status.containerStatuses | .[] | select(.name=="zap-ubi") | .state | keys[0]')
+        echo "CONTAINER_STATE zap-ubi ${CONTAINER_STATE}"
+    done
+  fi
+
+  kubectl -n "${ZAP_CLUSTER_NAMESPACE}" port-forward deployment/"${ZAP_DEPLOYMENT_NAME}" "${ZAP_PORT}":9080 &
+
+  ZAP_BASE_URL="http://localhost:${ZAP_PORT}"
+
+  #wait for port forwarding
+  sleep 60s
+  echo "ZAP_URL ${ZAP_BASE_URL}"
+}
+
+# Can be removed when zap images pushed to public icr
+setPullSecret() {
+  echo "Setting Pull Secrets"
+  image_url=$1
+  echo "image_url ${image_url}"
+  #if [ "${image_url}" == *"${PATTERN}"* ]; then
+  REGISTRY_URL=$(echo "${image_url}" | awk -F"${ICR_PATTERN}" '{print $1}')
+  if [ "${REGISTRY_URL}" ]; then
+    REGISTRY_URL="${REGISTRY_URL}${ICR_PATTERN}"
+    echo "REGISTRY_URL ${REGISTRY_URL}"
+    # Grant access to private image registry from namespace $ZAP_CLUSTER_NAMESPACE
+    # reference https://cloud.ibm.com/docs/containers?topic=containers-images#other_registry_accounts
+    echo "=========================================================="
+    echo -e "CONFIGURING ACCESS to private image registry from namespace ${ZAP_CLUSTER_NAMESPACE}"
+    IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-${REGISTRY_URL}"
+
+    echo -e "Checking for presence of ${IMAGE_PULL_SECRET_NAME} imagePullSecret for this toolchain"
+    if ! kubectl get secret "${IMAGE_PULL_SECRET_NAME}" --namespace "${ZAP_CLUSTER_NAMESPACE}"; then
+      echo -e "${IMAGE_PULL_SECRET_NAME} not found in ${ZAP_CLUSTER_NAMESPACE}, creating it"
+      # for Container Registry, docker username is 'token' and email does not matter
+      kubectl --namespace "${ZAP_CLUSTER_NAMESPACE}" create secret docker-registry "${IMAGE_PULL_SECRET_NAME}" --docker-server="${REGISTRY_URL}" --docker-password="${IBMCLOUD_API_KEY}" --docker-username=iamapikey --docker-email=a@b.com
+    else
+      echo -e "Namespace ${ZAP_CLUSTER_NAMESPACE} already has an imagePullSecret for this toolchain."
+    fi
+    if [ -z "${KUBERNETES_SERVICE_ACCOUNT_NAME}" ]; then KUBERNETES_SERVICE_ACCOUNT_NAME="default" ; fi
+      SERVICE_ACCOUNT=$(kubectl get serviceaccount "${KUBERNETES_SERVICE_ACCOUNT_NAME}"  -o json --namespace "${ZAP_CLUSTER_NAMESPACE}" )
+    if ! echo "${SERVICE_ACCOUNT}" | jq -e '. | has("imagePullSecrets")' > /dev/null ; then
+      kubectl patch --namespace "${ZAP_CLUSTER_NAMESPACE}" serviceaccount/"${KUBERNETES_SERVICE_ACCOUNT_NAME}" -p '{"imagePullSecrets":[{"name":"'"${IMAGE_PULL_SECRET_NAME}"'"}]}'
+    else
+      if echo "${SERVICE_ACCOUNT}" | jq -e '.imagePullSecrets[] | select(.name=="'"${IMAGE_PULL_SECRET_NAME}"'")' > /dev/null ; then 
+        echo -e "Pull secret already found in ${KUBERNETES_SERVICE_ACCOUNT_NAME} serviceAccount"
+      else
+        echo "Inserting toolchain pull secret into ${KUBERNETES_SERVICE_ACCOUNT_NAME} serviceAccount"
+        kubectl patch --namespace "${ZAP_CLUSTER_NAMESPACE}" serviceaccount/"${KUBERNETES_SERVICE_ACCOUNT_NAME}" --type='json' -p='[{"op":"add","path":"/imagePullSecrets/-","value":{"name": "'"${IMAGE_PULL_SECRET_NAME}"'"}}]'
+      fi
+    fi
+  fi
+}
+
+getAPIDeploymentFile() {
+  echo "=========================================================="
+  mkdir -p zap-scan
+  echo "Creating DEPLOYMENT.YML manifest"
+  cat > zap-scan/deployment.yaml << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ""
+  labels:
+    app: zapapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zapapi
+  template:
+    metadata:
+      labels:
+        app: zapapi
+    spec:
+      containers:
+      - name: zap-ubi
+        image: ""
+        ports:
+        - containerPort: 9080
+EOF
+  DEPLOYMENT_FILE=zap-scan/deployment.yaml  
+}
+
+getUIDeploymentFile() {
+  echo "=========================================================="
+  mkdir zap-scan
+  echo "Creating DEPLOYMENT.YML manifest"
+  cat > zap-scan/deployment_ui.yaml << EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ""
+  namespace: zap
+  labels:
+    app: zapui
+spec:
+  revisionHistoryLimit: 10
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zapui
+  template:
+    metadata:
+      labels:
+        app: zapui
+    spec:
+      containers:
+        - name: zap-ui-scanner-service-v2
+          image: ""
+          ports:
+            - containerPort: 9080
+          env:
+            - name: ZAP_PROXY
+              value: 'http://localhost:8080'
+            - name: ZAP_PROXY_NODE_API
+              value: 'http://localhost:3000'
+        - name: zap-ui-scanner-proxy
+          image: ""
+          ports:
+            - containerPort: 3000
+            - containerPort: 8080
+
+EOF
+  DEPLOYMENT_FILE=zap-scan/deployment_ui.yaml
+}

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+export IBMCLOUD_API
+export ZAP_CLUSTER_NAMESPACE
+export IBMCLOUD_API_KEY
+export IBMCLOUD_IKS_CLUSTER_NAME
+export ZAP_UI_IMAGE
+export ZAP_PROXY_IMAGE
+export ZAP_API_IMAGE
+export PIPELINE_DEBUG
+export RUN_UI_SCAN
+export ICR_PATTERN
+export RUN_INLINE
+export ZAP_API_DEPLOYMENT
+export ZAP_UI_DEPLOYMENT
+export DEPLOYMENT_FILE
+export IAM_ENDPOINT
+export TARGET_API_KEY
+export TARGET_APPLICATION_SERVER_URL
+export CUSTOM_API_SCRIPT_PATH
+export CUSTOM_UI_SCRIPT_PATH
+export UI_SCRIPTS_DIR
+export APP_REPO
+export DEFINITION_PATHS
+export CONTEXT_FILE
+export POLLING_INTERVAL
+export FILTER_OPTIONS
+
+# Cloud enviroment - default: https://cloud.ibm.com
+IBMCLOUD_API="$(get_env ibmcloud-api "https://cloud.ibm.com")"
+# Apikey for deploying zap to cluster
+IBMCLOUD_API_KEY="$(get_env ibmcloud-api-key "")"
+# Cluster for deploying Zap pods
+IBMCLOUD_IKS_CLUSTER_NAME="$(get_env cluster-name "")"
+
+# IAM endpoint - default: https://iam.cloud.ibm.com/identity/token
+IAM_ENDPOINT="$(get_env iam-token-endpoint "")"
+# Api-key for IAM authentcation
+TARGET_API_KEY="$(get_env target-api-key "")"
+# Note: Both need to be set to add IAM authentication to api scan request
+
+# The Application Url APP_URL
+TARGET_APPLICATION_SERVER_URL="$(get_env target-application-server-url "")"
+
+# Path to a script that can be run to modify the swagger json before the scan request
+# e.g convert from yaml to json or modify entries
+CUSTOM_API_SCRIPT_PATH="${WORKSPACE}/$(get_env zap-api-custom-script "")"
+
+# Path to script that can be used to modify the uiscripts.zip payload for the UI scan
+# e.g It is likely that it will be required to generate a bash script containing secrets for the UI tests
+CUSTOM_UI_SCRIPT_PATH="${WORKSPACE}/$(get_env zap-ui-custom-script "")"
+
+# Path to the directory containing the UI tests and required files to run the UI scan
+UI_SCRIPTS_DIR="${WORKSPACE}/$(get_env zap-ui-script-directory "")"
+
+# The path to the files containing the Swagger definitions. Can be comma separated list
+DEFINITION_PATHS="${WORKSPACE}/$(get_env swagger-definition-files "")"
+
+# Path to a context file for UI scans
+CONTEXT_FILE="${WORKSPACE}/$(get_env context-file "")"
+# Debug flag 0 off 1 on
+PIPELINE_DEBUG="$(get_env pipeline-debug "")"
+# Severity filter options for reports High, Medium, Low, Informational
+FILTER_OPTIONS="$(get_env filter-options "")"
+# Flag to switch between UI and API scan
+RUN_UI_SCAN="$(get_env zap-ui-scan "false")"
+
+# Flag to switch between deploying zap to a cluster or running DinD
+RUN_INLINE="$(get_env zap_dind "true")"
+
+# DEFAULTS for Kube cluster deploy
+ZAP_UI_PORT="$(get_env zap-ui-port "9085")"
+ZAP_API_PORT="$(get_env zap-api-port "9086")"
+ZAP_API_DEPLOYMENT="$(get_env zap_api_deployment_name "zap-api-deployment")"
+ZAP_UI_DEPLOYMENT="$(get_env zap_ui_deployment_name "zap-ui-deployment")"
+ZAP_PROXY_SERVICE_NAME="$(get_env zap-proxy-service "zap-proxy-service")"
+ZAP_CLUSTER_NAMESPACE="$(get_env zap-namespace "zap")"
+POLLING_INTERVAL="$(get_env zap-polling-interval "120s")"
+
+# Defaults for evidence gathering
+ZAP_EVIDENCE_TYPE="$(get_env zap_evidence_type "com.ibm.dynamic_scan")"
+ZAP_STATUS_TYPE="$(get_env zap_status_type "failure")"
+# Addition logging
+SHOW_CONTAINER_LOGS="$(get_env show-container-log "false")"
+SHOW_ZAP_LOGS="$(get_env show-zap-log "false")"
+
+# Images and params for setting up pull secrets. 
+# Looking to get these pushed to ICR to remove the self hosting dependency and need for pull secrets
+ZAP_UI_IMAGE="$(get_env zap-ui-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-ui-scanner@sha256:7e5b50ad343228327ef5ce8446109430184b6e5a999730837be2ef3aa7104d8c")"
+ZAP_PROXY_IMAGE="$(get_env zap-proxy-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-ui-proxy@sha256:c66dcebdf2bba59a9b3e8506710fba41c7edb9105f23caa673343fbdb1278e44")"
+ZAP_API_IMAGE="$(get_env zap-api-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-api-scanner@sha256:e8984f7077199b0a8b4d6f49c655b0305f41ed5769dcef8d4947f49579e375df")"
+
+ICR_PATTERN="icr.io"

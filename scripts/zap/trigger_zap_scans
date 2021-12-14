@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+    CURRENT_DIRECTORY=$(pwd)
+    
+    # GENERAL NOTE
+    # The zap scan scripts assume it is working from ${WORKSPACE} (/workspace/app)
+    # Paths are set based on this. For example. If the /workspace/app contains
+    # a repo called 'myzap_repo' which contains the zap scripts, the path you specify
+    # for the set up steps below should begin with 'myzap_repo/'. 
+    # The scripts will automatically prefix these paths with ${WORKSPACE}.
+    # By default when an async task starts up, it copies the content of your repo into /workspace/app/one-pipeline-config-repo
+    # During the setup you must switch to ${WORKSPACE} and you can specify 'one-pipeline-config-repo' when setting the paths
+    # The reason to specify the paths this way, is to allow a git clone command to run, cloning an additional repo into ${WORKSPACE}
+    # The user might wish to have a common repo which holds the core zap scripts
+    # And have specific scripts in the application repo
+
+    # CLONE REPO
+    # Example common repo containing the core zap scripts
+    # GIT_TOKEN="$(get_env git-token "")" where git-token is a pipeline param set in the UI
+    # git clone "https://${GIT_TOKEN}@github.ibm.com/huayuenh/myzap_repo"
+    # set_env "zap-core-scripts" "myzap_repo/scripts/zap/zap_core"
+
+
+    # ##SCAN SET UP FOR API AND UI##
+    
+    # SET THE WORKING DIRECTORY
+    cd "${WORKSPACE}"
+
+    # For deploying zap to a cluster an api-key and cluster name is required
+    # Assumes apikey secret value is stored under pipeline param called "ibmcloud-api-key"
+    # This can be updated in the zap-core/setup script
+
+    # SET CLUSTER NAME
+    # expects a parameter in the pipeline UI called "cluster-name"
+    # can be updated in the zap-core/setup script. Search for IBMCLOUD_IKS_CLUSTER_NAME
+
+    # SET APIKEY FOR CLUSTER DEPLOY
+    # expects a parameter in the pipeline UI called "ibmcloud-api-key"
+    # again this can be changed in the zap-core/setup script. See IBMCLOUD_API_KEY
+
+    # SEE zap-core/setup for other optional params
+
+    # SET THE CORE ZAP FILES DIRECTORY
+    set_env "zap-core-scripts" "one-pipeline-config-repo/scripts/zap/zap_core"
+
+    # SET UP A RESULTS FILTER High, Medium, Low, Informational (Optional). Reommended to filter out Informational
+    set_env "filter-options" "Informational"
+
+    # SET ADDITIONAL LOGGING
+    #set_env "show-container-log" "true"
+    #set_env "show-zap-log" "true"
+
+    # FLAG FOR RUNNING API SCAN AS DIND default is false
+    set_env "zap_dind" "true"
+
+    # set the url of the app to scan
+    # reading back the param that was exported in the dynamic-scan setup stage
+    export URL
+    URL="$(get_env app-url "${APP_URL}")"
+    set_env "target-application-server-url" "${URL}"
+
+    # set the swagger defintion file(s) comma separated if required
+    set_env "swagger-definition-files" "one-pipeline-config-repo/definitions/definitions1.json"
+
+    # set an optional custom file to modify the swagger definition before it is sent to be scan
+    set_env "zap-api-custom-script" "one-pipeline-config-repo/scripts/zap/zap-custom-scripts/custom-api-script"
+
+    # start the scan
+    source one-pipeline-config-repo/scripts/zap/zap_core/run_scan
