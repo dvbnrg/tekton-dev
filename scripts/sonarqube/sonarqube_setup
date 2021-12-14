@@ -7,6 +7,11 @@ export IKS_BETA_VERSION=1
 IBMCLOUD_API=$(get_env ibmcloud-api "https://cloud.ibm.com")
 IBMCLOUD_IKS_REGION="$(get_env dev-region | awk -F ":" '{print $NF}')"
 IBMCLOUD_IKS_CLUSTER_NAME="$(get_env cluster-name)"
+if [ -f /config/api-key ]; then
+  IBMCLOUD_API_KEY="$(cat /config/api-key)" # pragma: allowlist secret
+else
+  IBMCLOUD_API_KEY="$(cat /config/ibmcloud-api-key)" # pragma: allowlist secret
+fi
 
 export SONAR_INSTANCE
 export SONAR_HOST_URL
@@ -35,6 +40,12 @@ else
   printf "\n======================\n\n" >&2
   retry 5 2 \
     ibmcloud ks cluster config --cluster "$IBMCLOUD_IKS_CLUSTER_NAME"
+    ibmcloud ks cluster get --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}" --json > "${IBMCLOUD_IKS_CLUSTER_NAME}.json"
+
+  if which oc > /dev/null && jq -e '.type=="openshift"' "${IBMCLOUD_IKS_CLUSTER_NAME}.json" > /dev/null; then
+    echo "${IBMCLOUD_IKS_CLUSTER_NAME} is an openshift cluster. Doing the appropriate oc login to target it"
+    oc login -u apikey -p "${IBMCLOUD_API_KEY}"
+  fi
 
   SONAR_INSTANCE=$(kubectl get deployment | grep "cocoa-sonarqube")
 

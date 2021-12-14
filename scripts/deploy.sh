@@ -73,9 +73,31 @@ if [ "$status" = failure ]; then
   exit 1
 fi
 
-IP_ADDRESS=$(kubectl get nodes -o json | jq -r '[.items[] | .status.addresses[] | select(.type == "ExternalIP") | .address] | .[0]')
-PORT=$(kubectl get service -n  "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" "$service_name" -o json | jq -r '.spec.ports[0].nodePort')
+DEPLOYMENT_FILE="$(cat /config/deployment-file)"
 
-echo "Application URL: http://${IP_ADDRESS}:${PORT}"
+if [ -z "${DEPLOYMENT_FILE}" ]; then
+    echo "deployment-file environment is not defined. assuming deployment-file as deployment.yml"
+    DEPLOYMENT_FILE=deployment.yml
+fi
 
-echo -n "http://${IP_ADDRESS}:${PORT}" > ../app-url
+CLUSTER_INGRESS_SUBDOMAIN=$( ibmcloud ks cluster get --cluster ${IBMCLOUD_IKS_CLUSTER_NAME} --json | jq -r '.ingressHostname // .ingress.hostname' | cut -d, -f1 )
+
+if [ ! -z "${CLUSTER_INGRESS_SUBDOMAIN}" ] && [ "${KEEP_INGRESS_CUSTOM_DOMAIN}" != true ]; then
+  INGRESS_DOC_INDEX=$(yq read --doc "*" --tojson $DEPLOYMENT_FILE | jq -r 'to_entries | .[] | select(.value.kind | ascii_downcase=="ingress") | .key')
+  if [ -z "$INGRESS_DOC_INDEX" ]; then
+    echo "No Kubernetes Ingress definition found in $DEPLOYMENT_FILE."
+  else
+     service_name=$(yq r --doc $INGRESS_DOC_INDEX $DEPLOYMENT_FILE metadata.name)  
+     APPURL=$(kubectl get ing ${service_name}  --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE"  -o json | jq -r  .spec.rules[0].host)
+     echo "Application URL: https://${APPURL}"
+     echo -n https://${APPURL} > ../app-url
+  fi
+
+else 
+
+  IP_ADDRESS=$(kubectl get nodes -o json | jq -r '[.items[] | .status.addresses[] | select(.type == "ExternalIP") | .address] | .[0]')
+  PORT=$(kubectl get service -n  "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" "$service_name" -o json | jq -r '.spec.ports[0].nodePort')
+  echo "Application URL: http://${IP_ADDRESS}:${PORT}"
+  echo -n "http://${IP_ADDRESS}:${PORT}" > ../app-url;
+
+fi
