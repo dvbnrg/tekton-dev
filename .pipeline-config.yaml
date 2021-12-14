@@ -82,7 +82,7 @@ acceptance-test:
 
 release:
   abort_on_failure: false
-  image: icr.io/continuous-delivery/toolchains/devsecops/compliance-baseimage:2.26.1@sha256:a780174a64474187b01b5e40a1721d8307f02897ac6f3eba2d482d4f4926edf1
+  image: icr.io/continuous-delivery/toolchains/devsecops/compliance-baseimage:2.38.2_commons-0.2.2@sha256:4681288df0f601002c9d963f66258699b61b57c3c9c539d8f305e0ef351d89ab
   script: |
     #!/usr/bin/env bash
 
@@ -90,7 +90,7 @@ release:
 
 scan-artifact:
   abort_on_failure: false
-  image: icr.io/continuous-delivery/toolchains/devsecops/compliance-baseimage:2.37.4@sha256:c18715eb1061db1af021beb8763c1b2e4664de9a8dd75a795da6ab42d13402ce
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12@sha256:ff4053b0bca784d6d105fee1d008cfb20db206011453071e86b69ca3fde706a4
   script: |
     #!/usr/bin/env bash
 
