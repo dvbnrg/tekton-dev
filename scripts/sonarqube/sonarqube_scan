@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 
+"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
+
 source "${ONE_PIPELINE_PATH}/tools/retry"
+source "${ONE_PIPELINE_PATH}/internal/tools/logging"
 
 
 curl_admin() {
   curl --fail --silent --show-error --location -K- <<< "-u ${SONAR_USER}:${SONAR_PASS}" "$@"
+  exit_code=$?
+  if [ $exit_code -ne 0 ]; then
+    exit $exit_code
+  fi
 }
 
 get_system_status() {
@@ -21,17 +28,17 @@ sonarqube_status_check() {
 
   while [[ "$SONAR_HEALTH" != "UP" ]]; do
     if [ $attempt -eq "$retry_count" ]; then
-      echo -e "\nAttempt $attempt. failed and there are no more attempts left, SonarQube is not up or the given credentials are not valid." >&2
+      debug "\nAttempt $attempt. failed and there are no more attempts left, SonarQube is not up or the given credentials are not valid."
       exit 1
     fi
 
-    echo "$attempt. attempt checking SonarQube startup failed... Retry in ${retry_sleep}s..." >&2
+    banner "$attempt. attempt checking SonarQube startup failed... Retry in ${retry_sleep}s..."
     sleep "$retry_sleep"
     SONAR_HEALTH=$(get_system_status)
     ((attempt++))
   done
 
-  printf "\nSonarQube instance is up and running!\n" >&2
+  banner "SonarQube instance is up and running!"
 }
 
 create_sonarqube_token() {
@@ -41,12 +48,18 @@ create_sonarqube_token() {
 
   if [ -s /tmp/sonarqube-token ] && [ -z "$SONAR_CONFIGURED" ]; then
     kubectl create secret generic "$SONAR_INSTANCE_NAME" --from-file=token=/tmp/sonarqube-token
+    exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+      error "Could not create \"$SONAR_INSTANCE_NAME\" secret\n"
+      exit $exit_code
+    fi
   fi
 }
 
 publish_sonar_to_doi() {
   if [[ -n "$(get_env BREAK_GLASS "")" ]]; then
-    printf "Break-Glass mode is on, skipping pushing scan results to doi\n" >&2
+    banner "Break-Glass mode is on, skipping pushing scan results to doi\n"
     return
   fi
 
@@ -66,6 +79,12 @@ publish_sonar_to_doi() {
 
   retry 5 2 \
     ibmcloud login -r "$IBMCLOUD_IKS_REGION" --apikey @"$ibmcloud_api_key_name" -a "$ibmcloud_api"
+  exit_code=$?
+
+  if [ $exit_code -ne 0 ]; then
+    error "Could not log in to the IBM Cloud\n"
+    exit $exit_code
+  fi
 
   retry 5 5 \
     ibmcloud doi publishtestrecord \
@@ -77,13 +96,13 @@ publish_sonar_to_doi() {
     --sqtoken "$(cat /tmp/sonarqube-token)"
 }
 
-printf "\n\nSonarQube Status Check" >&2
-printf "\n=====================\n\n" >&2
+banner "\nSonarQube Status Check"
+banner "=====================\n"
 sonarqube_status_check
 
 if [ ! -f /tmp/sonarqube-token ]; then
-  printf "\n\nCreate SonarQube Token" >&2
-  printf "\n=====================\n\n" >&2
+  banner "\nCreate SonarQube Token"
+  banner "=====================\n"
   create_sonarqube_token
 fi
 
@@ -93,28 +112,34 @@ list_repos | while IFS= read -r repo ; do
 
   path="$(load_repo "$repo" path)"
 
-  mkdir -p "${WORKSPACE}/__sonar_scan__/$name"
-  SONAR_DIR="${WORKSPACE}/__sonar_scan__/$name"
+  mkdir -p "${WORKSPACE}/sonar_scan/$name"
+  SONAR_DIR="${WORKSPACE}/sonar_scan/$name"
 
-  printf "\n\nScanner" >&2
-  printf "\n=====================\n\n" >&2
+  banner "\nScanner"
+  banner "=====================\n"
   cd "$WORKSPACE"/"$path" || exit
   docker run --network host  -v "$WORKSPACE"/"$path":/usr/src sonarsource/sonar-scanner-cli:4.5 sonar-scanner
+  exit_code=$?
+
+  if [ $exit_code -ne 0 ]; then
+    error "Could not run the Sonar Scanner\n"
+    exit $exit_code
+  fi
 
   SONAR_PROJECT_KEY=$(< "$WORKSPACE"/"$path"/sonar-project.properties grep sonar.projectKey | cut -d "=" -f2)
 
-  printf "\n\nIssues" >&2
-  printf "\n=====================\n\n" >&2
+  banner "\nIssues"
+  banner "=====================\n"
   PROJECT_ISSUES=$(curl_admin "${SONAR_HOST_URL}/api/issues/search?componentKeys=${SONAR_PROJECT_KEY}")
   echo "$PROJECT_ISSUES" | jq '.'
 
-  printf "\n\nQuality gate status" >&2
-  printf "\n======================\n\n" >&2
+  banner "\nQuality gate status"
+  banner "======================\n"
   PROJECT_STATUS=$(curl_admin "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}")
   echo "$PROJECT_STATUS" | jq '.'
 
-  printf "\n\nPublish to DOI" >&2
-  printf "\n======================\n\n" >&2
+  banner "\nPublish to DOI"
+  banner "======================\n"
   publish_sonar_to_doi
 
   # export results
@@ -124,51 +149,52 @@ list_repos | while IFS= read -r repo ; do
   #
   # store result and attachment for asset-based evidence locker
   #
-  stage_name="static_scan"
-
-  save_result static-scan "${SONAR_DIR}/app_issues"
-  save_result "${repo}-${stage_name}-attachments" "${SONAR_DIR}/app_issues"
-  save_result static-scan "${SONAR_DIR}/app_quality_status"
-  save_result "${repo}-${stage_name}-attachments" "${SONAR_DIR}/app_quality_status"
+  evidence_params=(
+    --tool-type "sonarqube" \
+    --evidence-type "com.ibm.static_scan" \
+    --asset-type "repo" \
+    --asset-key "${repo}"
+  )
 
   if [ -s "${SONAR_DIR}/app_issues" ]; then
     save_result static-scan "${SONAR_DIR}/app_issues"
-    save_result "${repo}-${stage_name}-attachments" "${SONAR_DIR}/app_issues"
+    evidence_params+=(
+      --attachment "${SONAR_DIR}/app_issues"
+    )
   fi
   if [ -s "${SONAR_DIR}/app_quality_status" ]; then
     save_result static-scan "${SONAR_DIR}/app_quality_status"
-    save_result "${repo}-${stage_name}-attachments" "${SONAR_DIR}/app_issues"
-  fi
-  STATIC_SCAN_STATUS=$(echo "$PROJECT_STATUS" | jq -r '.projectStatus.status' )
-  if [[ "${STATIC_SCAN_STATUS}" = "OK" ]] || [[ "${STATIC_SCAN_STATUS}" = "NONE" ]] || [[ "${STATIC_SCAN_STATUS}" = "WARN" ]]; then
-    STATIC_SCAN_STATUS_SUM+=0
-    save_repo "${repo}" "${stage_name}-result=0"
-  else
-    STATIC_SCAN_STATUS_SUM+=1
-    save_repo "${repo}" "${stage_name}-result=1"
+    evidence_params+=(
+      --attachment "${SONAR_DIR}/app_quality_status"
+    )
   fi
 
-  echo "$STATIC_SCAN_STATUS_SUM" > /tmp/static-scan-status
+  STATIC_SCAN_STATUS=$(echo "$PROJECT_STATUS" | jq -r '.projectStatus.status' )
+  if [[ "${STATIC_SCAN_STATUS}" = "OK" ]] || [[ "${STATIC_SCAN_STATUS}" = "NONE" ]] || [[ "${STATIC_SCAN_STATUS}" = "WARN" ]]; then
+    status="success"
+  else
+    set_env STATIC_SCAN_FAILURE "true"
+    status="failure"
+  fi
+
+  evidence_params+=(
+    --status "${status}"
+  )
+
+  collect-evidence "${evidence_params[@]}"
 done
 
 unset SONAR_PASS
 
 if [ -n "$SONAR_POD_NAME" ]; then
-  printf "\n\n======================\n" >&2
-  printf "You can connect to SonarQube by port-forwarding." >&2
-  printf "\nFor example you can access SonarQube at %s after running the following command on your computer: " "$SONAR_HOST_URL" >&2
-  printf "\nkubectl port-forward --address 0.0.0.0 pod/%s 9001:9000\n" "$SONAR_POD_NAME" >&2
-  printf "\n\nthe default username/password is admin/admin, if not set otherwise" >&2
-  printf "\n======================" >&2
+  banner "======================"
+  debug "You can connect to SonarQube by port-forwarding."
+  banner "For example you can access SonarQube at \"$SONAR_HOST_URL\" after running the following command on your computer: "
+  debug "kubectl port-forward --address 0.0.0.0 pod/\"$SONAR_POD_NAME\"  9001:9000"
+  debug "the default username/password is admin/admin, if not set otherwise"
+  banner "======================"
 else
-  printf "\n\n======================\n" >&2
-  printf "SonarQube is available at: %s" "$SONAR_HOST_URL" >&2
-  printf "\n======================" >&2
-fi
-STATIC_SCAN_SUM=$(cat /tmp/static-scan-status)
-
-if [[ "$STATIC_SCAN_SUM" == *"1"* ]]; then
-  exit 1
-else
-  exit 0
+  banner "\n======================"
+  banner "SonarQube is available at: \"$SONAR_HOST_URL\" "
+  banner "======================"
 fi

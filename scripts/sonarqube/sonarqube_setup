@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
+"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
+
 source "${ONE_PIPELINE_PATH}/tools/retry"
+source "${ONE_PIPELINE_PATH}/internal/tools/logging"
 
 export IKS_BETA_VERSION=1
 
@@ -26,22 +29,35 @@ if [ -n "$SONAR_CONFIGURED" ]; then
   read -r SONAR_HOST_URL <<< "$(get_env sonarqube | jq -r '.parameters.dashboard_url' | sed 's:/*$::')"
   read -r SONAR_USER <<< "$(get_env sonarqube | jq -r '.parameters.user_login')"
   read -r SONAR_PASS <<< "$(get_env sonarqube | jq -r '.parameters.user_password')"
+
 elif [[ -n "$BREAK_GLASS" ]]; then
-  printf "Break-Glass mode is on, skipping the rest of the task..." >&2
+  debug "Break-Glass mode is on, skipping the rest of the task..."
   exit 0
 else
   SONAR_HOST_URL=http://localhost:9001
-  printf "\n\nLogin to IBM Cloud" >&2
-  printf "\n======================\n\n" >&2
+  banner "\nLogin to IBM Cloud"
+  banner "======================\n"
   retry 5 2 \
     ibmcloud login -r "$IBMCLOUD_IKS_REGION" --apikey @/config/ibmcloud-api-key -a "$IBMCLOUD_API"
+  exit_code=$?
 
-  printf "\n\nDownload the Kubernetes configuration files to connect to your cluster by using 'kubectl' commands" >&2
-  printf "\n======================\n\n" >&2
+  if [ $exit_code -ne 0 ]; then
+    error "Could not log in to the IBM Cloud"
+    exit $exit_code
+  fi
+
+  banner "\nDownload the Kubernetes configuration files to connect to your cluster by using 'kubectl' commands"
+  banner "======================\n"
   retry 5 2 \
     ibmcloud ks cluster config --cluster "$IBMCLOUD_IKS_CLUSTER_NAME"
-    ibmcloud ks cluster get --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}" --json > "${IBMCLOUD_IKS_CLUSTER_NAME}.json"
-
+  exit_code=$?
+    
+  if [ $exit_code -ne 0 ]; then
+    error "\nCould not download the Kubernetes configuration files by using 'kubectl' commands"
+    exit $exit_code
+  fi
+    
+  ibmcloud ks cluster get --cluster "${IBMCLOUD_IKS_CLUSTER_NAME}" --json > "${IBMCLOUD_IKS_CLUSTER_NAME}.json"
   if which oc > /dev/null && jq -e '.type=="openshift"' "${IBMCLOUD_IKS_CLUSTER_NAME}.json" > /dev/null; then
     echo "${IBMCLOUD_IKS_CLUSTER_NAME} is an openshift cluster. Doing the appropriate oc login to target it"
     oc login -u apikey -p "${IBMCLOUD_API_KEY}"
@@ -53,5 +69,9 @@ else
     SONAR_INSTANCE_NAME=$(kubectl get deployment | grep "cocoa-sonarqube" | awk 'FNR == 1 {print $1}')
 
     kubectl get secret "$SONAR_INSTANCE_NAME" -o jsonpath='{.data.token}' | base64 --decode > /tmp/sonarqube-token
+    if [ $exit_code -ne 0 ]; then
+      error "Could not get \"$SONAR_INSTANCE_NAME\" sonarqube secret"
+      exit $exit_code
+    fi
   fi
 fi

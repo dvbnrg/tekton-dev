@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
+"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
+
+source "${ONE_PIPELINE_PATH}/internal/tools/logging"
+
 list_repos | while IFS= read -r repo ; do
   url="$(load_repo "$repo" url)"
   name=$(echo "$url" | cut -f5 -d/)
   path="$(load_repo "$repo" path)"
 
   if [ -f "$WORKSPACE"/"$path"/sonar-project.properties ]; then
-    printf "Using user provided 'sonar-project.properties' file" >&2
+    debug "Using user provided 'sonar-project.properties' file"
   else
     SONAR_PROJECT_KEY=$name"-compliance-check"
     mkdir -p "$WORKSPACE"/"$path"

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
+
 if [[ "$PIPELINE_DEBUG" == 1 ]]; then
   trap env EXIT
   env
@@ -10,3 +12,4 @@ fi
 . scripts/sonarqube/sonarqube_instance
 . scripts/sonarqube/sonarqube_settings
 . scripts/sonarqube/sonarqube_scan
+"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
