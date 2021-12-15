@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
-if kubectl get namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE"; then
-  echo "Namespace ${IBMCLOUD_IKS_CLUSTER_NAMESPACE} found!"
-else
-  kubectl create namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE";
-fi
+
 
 if kubectl get secret -n "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" "$IMAGE_PULL_SECRET_NAME"; then
   echo "Image pull secret ${IMAGE_PULL_SECRET_NAME} found!"

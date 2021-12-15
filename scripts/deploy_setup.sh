@@ -58,6 +58,12 @@ fi
 CLUSTER_INGRESS_SUBDOMAIN=$( ibmcloud ks cluster get --cluster ${IBMCLOUD_IKS_CLUSTER_NAME} --json | jq -r '.ingressHostname // .ingress.hostname' | cut -d, -f1 )
 CLUSTER_INGRESS_SECRET=$( ibmcloud ks cluster get --cluster ${IBMCLOUD_IKS_CLUSTER_NAME} --json | jq -r '.ingressSecretName // .ingress.secretName' | cut -d, -f1 )
 
+if kubectl get namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE"; then
+  echo "Namespace ${IBMCLOUD_IKS_CLUSTER_NAMESPACE} found!"
+else
+  kubectl create namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE";
+fi
+
 
 if [ ! -z "${CLUSTER_INGRESS_SUBDOMAIN}" ] && [ "${KEEP_INGRESS_CUSTOM_DOMAIN}" != true ]; then
   echo "=========================================================="
