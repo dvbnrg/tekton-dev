@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-"${ONE_PIPELINE_PATH}"/internal/tools/deprecation_warning
-
 source "${ONE_PIPELINE_PATH}/tools/retry"
 source "${ONE_PIPELINE_PATH}/internal/tools/logging"
 

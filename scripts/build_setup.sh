@@ -12,6 +12,9 @@ get-icr-region() {
     ibm:yp:us-south)
       echo us
       ;;
+    ibm:yp:us-east)
+      echo us
+      ;;
     ibm:yp:eu-de)
       echo de
       ;;
