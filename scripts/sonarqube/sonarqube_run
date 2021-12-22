@@ -9,4 +9,4 @@ fi
 . scripts/sonarqube/sonarqube_setup
 . scripts/sonarqube/sonarqube_instance
 . scripts/sonarqube/sonarqube_settings
-. scripts/sonarqube/sonarqube_scans
+. scripts/sonarqube/sonarqube_scan
