@@ -20,14 +20,17 @@ const helmet = require('helmet')
 const indexRouter = require('./routes/index');
 const flightBookingRouter = require('./routes/flights');
 
+const defaultDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
+delete defaultDirectives['upgrade-insecure-requests'];
+
 const app = express();
 app.use(helmet.hidePoweredBy());
 app.use(helmet.frameguard());
 app.use(helmet.noSniff());
 app.use(
   helmet.contentSecurityPolicy({
-    useDefaults: true,
     directives: {
+      ...defaultDirectives,
       "script-src": ["'self'", "unpkg.com"]
     },
   })
