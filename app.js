@@ -15,10 +15,12 @@ const express = require('express');
 const path = require('path');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
-const helmet = require('helmet')
+const helmet = require('helmet');
+const nocache = require("nocache");
 
 const indexRouter = require('./routes/index');
 const flightBookingRouter = require('./routes/flights');
+const airportsRouter = require('./routes/airports');
 
 const defaultDirectives = helmet.contentSecurityPolicy.getDefaultDirectives();
 delete defaultDirectives['upgrade-insecure-requests'];
@@ -27,11 +29,15 @@ const app = express();
 app.use(helmet.hidePoweredBy());
 app.use(helmet.frameguard());
 app.use(helmet.noSniff());
+app.use(nocache());
 app.use(
   helmet.contentSecurityPolicy({
     directives: {
       ...defaultDirectives,
-      "script-src": ["'self'", "unpkg.com"]
+      "script-src": ["'self'", "unpkg.com"],
+      "style-src": ["'self'", "unpkg.com"],
+      "font-src": ["'self'", "fonts.gstatic.com"],
+      "form-action": ["'self'"]
     },
   })
 );
@@ -40,14 +46,15 @@ app.use(
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use(session({ secret: 'work hard', saveUninitialized: true, resave: true, cookie : { sameSite: 'strict' } }));
+app.use(session({ secret: 'work hard', saveUninitialized: true, resave: true, cookie : { sameSite: 'strict', secure: true } }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use('/flightbooking', flightBookingRouter);
+app.use('/airports', airportsRouter);
 app.use('/', indexRouter);
-app.use('/flightbooking', flightBookingRouter)
 
 // catch 404 and forward to error handler
 app.use((req, res, next) => {
@@ -57,13 +64,13 @@ app.use((req, res, next) => {
 // error handler
 app.use((err, req, res, next) => {
   // set locals, only providing error in development
+  console.log(err);
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-
+  res.status(err.status || 500).send({
+    message: err.message
+  });
 });
 
 module.exports = app;

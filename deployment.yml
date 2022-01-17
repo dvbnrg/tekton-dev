@@ -20,7 +20,7 @@ spec:
             cpu: "250m"
           limits:
             memory: "128Mi"
-            cpu: "500m"
+            cpu: "1000m"
         image: webapp:1
         # for local development against minikube registry
         # imagePullPolicy: Never

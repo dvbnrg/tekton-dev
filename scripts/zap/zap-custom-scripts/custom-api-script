@@ -26,7 +26,7 @@ json-refs resolve "${SWAGGER_JSON_FILE}" > _resolved.json
 # wrap the swagger into a complete definitions file as expected by the zap scanner
 jq '{
     "excludeScanTypes": [],
-    "apisToScan": ["all"],
+    "apisToScan": [{"path":"/health", "method":"get"}],
     "apiDefinitionJson": .
 }' "$(pwd)/_resolved.json" > "${API_DATA_FILE}"
 

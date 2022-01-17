@@ -25,10 +25,6 @@ function logincheck(req, res, next) {
 }
 
 router.get('/health', (req, res, next) => {
-  res.setHeader('Content-Type', 'application/json')
-  res.setHeader('X-Content-Type-Options','nosniff')
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src unpkg.com;")
-
   return res.status(200).json({health:"OK"})
 })
 

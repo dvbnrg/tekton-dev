@@ -18,6 +18,8 @@ specific language governing permissions and limitations under the License.
     <meta charset="UTF-8" />
     <%- include('./partials/head'); %>
     <link rel="stylesheet" href="/stylesheets/flights.css">
+    <script defer src="/javascript/config.js"></script>
+    <script defer src="/javascript/index.js"></script>
 </head>
 
 <body>
@@ -56,13 +58,17 @@ specific language governing permissions and limitations under the License.
                                 <div class="bx--col-lg-4">
                                     <div class="form-group">
                                         <span class="form-label">Flying from</span>
-                                        <input class="form-control" type="text" placeholder="City or airport">
+                                        <input class="form-control city_results_input" id="q_from" type="text" placeholder="City or airport">
+                                        <select class="city_results" id="result_from"></select>
+                                        <label class="err-airport-not-found" id="airport-not-found-from">No Airport / City found</label>
                                     </div>
                                 </div>
                                 <div class="bx--col-lg-4">
                                     <div class="form-group">
-                                        <span class="form-label">Flyning to</span>
-                                        <input class="form-control" type="text" placeholder="City or airport">
+                                        <span class="form-label">Flying to</span>
+                                        <input class="form-control city_results_input" id="q_to" type="text" placeholder="City or airport">
+                                        <select class="city_results" id="result_to"></select>
+                                        <label class="err-airport-not-found" id="airport-not-found-to">No Airport / City found</label>
                                     </div>
                                 </div>
                             </div>

@@ -205,3 +205,30 @@
 .btm-wid {
   padding: 70px 50px;
 }
+
+.city_results {
+  border: 1px dotted #ccc;
+  padding: 3px;
+  background-color: white;
+  z-index: 999;
+  position: absolute;
+  max-width: 300px;
+}
+.city_results ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+.city_results ul li {
+  padding: 5px 0;
+}
+.city_results ul li:hover {
+  background: #eee;
+  font-weight: 800;
+}
+
+.err-airport-not-found {
+  color: red;
+  padding: 5px;
+  text-align: center;
+}
