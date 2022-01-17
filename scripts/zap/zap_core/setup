@@ -88,6 +88,6 @@ SHOW_ZAP_LOGS="$(get_env show-zap-log "false")"
 # Looking to get these pushed to ICR to remove the self hosting dependency and need for pull secrets
 ZAP_UI_IMAGE="$(get_env zap-ui-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-ui-scanner@sha256:7e5b50ad343228327ef5ce8446109430184b6e5a999730837be2ef3aa7104d8c")"
 ZAP_PROXY_IMAGE="$(get_env zap-proxy-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-ui-proxy@sha256:c66dcebdf2bba59a9b3e8506710fba41c7edb9105f23caa673343fbdb1278e44")"
-ZAP_API_IMAGE="$(get_env zap-api-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-api-scanner@sha256:975cba01cb4cd734e35f03f460834be3f6adfb49de7b54e8080cd08865a4139c")"
+ZAP_API_IMAGE="$(get_env zap-api-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-api-scanner@sha256:7030bfe59317dd4e1341a33bb4b81d97e25a8b80078278b9d5ce59a898ae17f2")"
 
 ICR_PATTERN="icr.io"
