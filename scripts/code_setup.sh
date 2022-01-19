@@ -6,7 +6,7 @@ APP_TOKEN_PATH="./app-token"
 read -r APP_REPO_NAME APP_REPO_OWNER APP_SCM_TYPE APP_API_URL < <(get_repo_params "$(get_env APP_REPO)" "$APP_TOKEN_PATH")
 
 if [[ $APP_SCM_TYPE == "gitlab" ]]; then
-  curl --location --request PUT "${APP_API_URL}/projects/${OWNER}%2F${REPO}/" \
+  curl --location --request PUT "${APP_API_URL}/projects/${APP_REPO_OWNER}%2F${APP_REPO_NAME}/" \
     --header "PRIVATE-TOKEN: $(cat $APP_TOKEN_PATH)" \
     --header 'Content-Type: application/json' \
     --data-raw '{
@@ -17,4 +17,3 @@ else
     -XPUT -d '{"required_pull_request_reviews":{"dismiss_stale_reviews":true},"required_status_checks":{"strict":true,"contexts":["tekton/code-branch-protection","tekton/code-unit-tests","tekton/code-cis-check","tekton/code-vulnerability-scan","tekton/code-detect-secrets"]},"enforce_admins":null,"restrictions":null}'
 fi
 npm install
-npm ci
