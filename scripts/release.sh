@@ -20,15 +20,15 @@ read -r INVENTORY_REPO_NAME INVENTORY_REPO_OWNER INVENTORY_SCM_TYPE INVENTORY_AP
 # collect common parameters into an array
 #
 params=(
-    --repository-url="${APP_REPO}" \
-    --commit-sha="${COMMIT_SHA}" \
-    --version="${COMMIT_SHA}" \
-    --build-number="${BUILD_NUMBER}" \
-    --pipeline-run-id="${PIPELINE_RUN_ID}" \
-    --org="$INVENTORY_REPO_OWNER" \
-    --repo="$INVENTORY_REPO_NAME" \
-    --git-provider="$INVENTORY_SCM_TYPE" \
-    --git-token-path="$INVENTORY_TOKEN_PATH" \
+    --repository-url="${APP_REPO}"
+    --commit-sha="${COMMIT_SHA}"
+    --version="${COMMIT_SHA}"
+    --build-number="${BUILD_NUMBER}"
+    --pipeline-run-id="${PIPELINE_RUN_ID}"
+    --org="$INVENTORY_REPO_OWNER"
+    --repo="$INVENTORY_REPO_NAME"
+    --git-provider="$INVENTORY_SCM_TYPE"
+    --git-token-path="$INVENTORY_TOKEN_PATH"
     --git-api-url="$INVENTORY_API_URL"
 )
 
@@ -39,27 +39,36 @@ APP_TOKEN_PATH="./app-token"
 read -r APP_REPO_NAME APP_REPO_OWNER APP_SCM_TYPE APP_API_URL < <(get_repo_params "$(get_env APP_REPO)" "$APP_TOKEN_PATH")
 token=$(cat $APP_TOKEN_PATH)
 
-if [ "$APP_SCM_TYPE" == "gitlab" ]; then
-    id=$(curl --header "PRIVATE-TOKEN: ${token}" ${APP_API_URL}/projects/${APP_REPO_ORG}%2F${APP_REPO_NAME} | jq .id)
-    DEPLOYMENT_ARTIFACT="${APP_API_URL}/projects/${id}/repository/files/deployment.yml/raw?ref=${COMMIT_SHA}"
-else
-    DEPLOYMENT_ARTIFACT="https://raw.githubusercontent.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/deployment.yml"
-fi
-DEPLOYMENT_ARTIFACT_PATH="$(load_repo app-repo path)"
-DEPLOYMENT_ARTIFACT_DIGEST="$(shasum -a256 "${WORKSPACE}/${DEPLOYMENT_ARTIFACT_PATH}/deployment.yml" | awk '{print $1}')"
+function upload_deployment_files_artifacts() {
 
-cocoa inventory add \
-    --artifact="${DEPLOYMENT_ARTIFACT}" \
-    --type="deployment" \
-    --sha256="${DEPLOYMENT_ARTIFACT_DIGEST}" \
-    --signature="${DEPLOYMENT_ARTIFACT_DIGEST}" \
-    --name="${APP_REPO_NAME}_deployment" \
-    "${params[@]}"
+    deployment_file=$1
+    deployment_type=$2
+    if [ "$APP_SCM_TYPE" == "gitlab" ]; then
+        id=$(curl --header "PRIVATE-TOKEN: ${token}" ${APP_API_URL}/projects/${APP_REPO_ORG}%2F${APP_REPO_NAME} | jq .id)
+        DEPLOYMENT_ARTIFACT="${APP_API_URL}/projects/${id}/repository/files/${deployment_file}/raw?ref=${COMMIT_SHA}"
+    else
+        DEPLOYMENT_ARTIFACT="https://raw.githubusercontent.com/${APP_REPO_ORG}/${APP_REPO_NAME}/${COMMIT_SHA}/${deployment_file}"
+    fi
+    DEPLOYMENT_ARTIFACT_PATH="$(load_repo app-repo path)"
+    DEPLOYMENT_ARTIFACT_DIGEST="$(shasum -a256 "${WORKSPACE}/${DEPLOYMENT_ARTIFACT_PATH}/${deployment_file}" | awk '{print $1}')"
+
+    cocoa inventory add \
+        --artifact="${DEPLOYMENT_ARTIFACT}" \
+        --type="deployment" \
+        --sha256="${DEPLOYMENT_ARTIFACT_DIGEST}" \
+        --signature="${DEPLOYMENT_ARTIFACT_DIGEST}" \
+        --name="${APP_REPO_NAME}_${deployment_type}_deployment" \
+        "${params[@]}"
+
+}
+upload_deployment_files_artifacts deployment_iks.yml IKS
+upload_deployment_files_artifacts deployment_os.yml OPENSHIFT
+
 
 #
 # add all built images as build artifacts to the inventory
 #
-while read -r artifact ; do
+while read -r artifact; do
     image="$(load_artifact "${artifact}" name)"
     signature="$(load_artifact "${artifact}" signature)"
     digest="$(load_artifact "${artifact}" digest)"
