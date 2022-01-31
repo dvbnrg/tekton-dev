@@ -2,14 +2,6 @@
 echo "starting dind"
 DOCKER_TLS_VERIFY=1
 
-# This block can be removed if zap images get public ICR hosting. Pull secret wont be required
-# FIND_ICR=$(echo "${ZAP_API_IMAGE}" | grep "${ICR_PATTERN}")
-# if [ "${FIND_ICR}" ]; then
-#     REGION_PREFIX=${ZAP_API_IMAGE%.icr.io*}
-#     ICR="${REGION_PREFIX}.icr.io"
-#     echo "${IBMCLOUD_API_KEY}" | docker login -u iamapikey --password-stdin "${ICR}"
-# fi
-
 if [ "${RUN_UI_SCAN}" = "true" ]; then
     echo "Stepping up UI container"
     docker run -d -t -p 8080:8080  --name "${ZAP_PROXY_SERVICE_NAME}" "${ZAP_PROXY_IMAGE}"
@@ -32,7 +24,7 @@ if [ "${RUN_UI_SCAN}" = "true" ]; then
     docker network connect zap-network "${ZAP_UI_DEPLOYMENT}"
     docker ps
     sleep 60s
-    ZAP_BASE_URL="http://localhost:9080"
+    ZAP_BASE_URL="http://${ZAP_DIND_LOCALHOST}:9080"
 else
     # step up zap api container
     echo "Stepping up API container"
@@ -44,5 +36,5 @@ else
     done;
     echo "Container ready"
     docker ps
-    ZAP_BASE_URL="http://localhost:9080"
-fi  
+    ZAP_BASE_URL="http://${ZAP_DIND_LOCALHOST}:9080"
+fi

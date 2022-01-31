@@ -34,11 +34,17 @@ report() {
   if [[ "${MESSAGE}" == "COMPLETED" ]]; then
       FILTER='{"alertsSeverityFilter" : "'$FILTER_OPTIONS'"}'
       echo "filtor options $FILTER"
-      REPORT=$(curl -X GET "${ZAP_BASE_URL}"/report)
       curl -X GET -H "Content-type: application/json" -d "${FILTER}" "${ZAP_BASE_URL}"/report -o "${REPORTFILE}"
+
+      ZAP_STATUS_TYPE="$(getZapEvidenceStatus "${REPORTFILE}")"
+
       source "${ZAP_SCRIPTS_DIR}"/report
   else
       echo "Please see zap scanner logs for more details"
+
+      ZAP_STATUS_TYPE="failure"
+
+      source "${ZAP_SCRIPTS_DIR}"/report
   fi
 }
 

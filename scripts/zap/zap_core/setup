@@ -25,6 +25,7 @@ export DEFINITION_PATHS
 export CONTEXT_FILE
 export POLLING_INTERVAL
 export FILTER_OPTIONS
+export ZAP_LOCALHOST
 
 # Cloud enviroment - default: https://cloud.ibm.com
 IBMCLOUD_API="$(get_env ibmcloud-api "https://cloud.ibm.com")"
@@ -61,7 +62,7 @@ CONTEXT_FILE="${WORKSPACE}/$(get_env context-file "")"
 # Debug flag 0 off 1 on
 PIPELINE_DEBUG="$(get_env pipeline-debug "")"
 # Severity filter options for reports High, Medium, Low, Informational
-FILTER_OPTIONS="$(get_env filter-options "")"
+FILTER_OPTIONS="$(get_env filter-options "Informational")"
 # Flag to switch between UI and API scan
 RUN_UI_SCAN="$(get_env zap-ui-scan "false")"
 
@@ -73,13 +74,14 @@ ZAP_UI_PORT="$(get_env zap-ui-port "9085")"
 ZAP_API_PORT="$(get_env zap-api-port "9086")"
 ZAP_API_DEPLOYMENT="$(get_env zap_api_deployment_name "zap-api-deployment")"
 ZAP_UI_DEPLOYMENT="$(get_env zap_ui_deployment_name "zap-ui-deployment")"
+ZAP_DIND_LOCALHOST="$(get_env zap-dind-localhost "localhost")"
 ZAP_PROXY_SERVICE_NAME="$(get_env zap-proxy-service "zap-proxy-service")"
 ZAP_CLUSTER_NAMESPACE="$(get_env zap-namespace "zap")"
 POLLING_INTERVAL="$(get_env zap-polling-interval "120s")"
 
 # Defaults for evidence gathering
 ZAP_EVIDENCE_TYPE="$(get_env zap_evidence_type "com.ibm.dynamic_scan")"
-ZAP_STATUS_TYPE="$(get_env zap_status_type "failure")"
+
 # Addition logging
 SHOW_CONTAINER_LOGS="$(get_env show-container-log "false")"
 SHOW_ZAP_LOGS="$(get_env show-zap-log "false")"
@@ -90,4 +92,3 @@ ZAP_UI_IMAGE="$(get_env zap-ui-image "icr.io/continuous-delivery/toolchains/devs
 ZAP_PROXY_IMAGE="$(get_env zap-proxy-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-ui-proxy@sha256:c66dcebdf2bba59a9b3e8506710fba41c7edb9105f23caa673343fbdb1278e44")"
 ZAP_API_IMAGE="$(get_env zap-api-image "icr.io/continuous-delivery/toolchains/devsecops/owasp-zap-api-scanner@sha256:7030bfe59317dd4e1341a33bb4b81d97e25a8b80078278b9d5ce59a898ae17f2")"
 
-ICR_PATTERN="icr.io"

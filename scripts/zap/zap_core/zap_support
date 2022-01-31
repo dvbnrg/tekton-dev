@@ -148,45 +148,6 @@ deploy() {
   echo "ZAP_URL ${ZAP_BASE_URL}"
 }
 
-# Can be removed when zap images pushed to public icr
-setPullSecret() {
-  echo "Setting Pull Secrets"
-  image_url=$1
-  echo "image_url ${image_url}"
-  #if [ "${image_url}" == *"${PATTERN}"* ]; then
-  REGISTRY_URL=$(echo "${image_url}" | awk -F"${ICR_PATTERN}" '{print $1}')
-  if [ "${REGISTRY_URL}" ]; then
-    REGISTRY_URL="${REGISTRY_URL}${ICR_PATTERN}"
-    echo "REGISTRY_URL ${REGISTRY_URL}"
-    # Grant access to private image registry from namespace $ZAP_CLUSTER_NAMESPACE
-    # reference https://cloud.ibm.com/docs/containers?topic=containers-images#other_registry_accounts
-    echo "=========================================================="
-    echo -e "CONFIGURING ACCESS to private image registry from namespace ${ZAP_CLUSTER_NAMESPACE}"
-    IMAGE_PULL_SECRET_NAME="ibmcloud-toolchain-${PIPELINE_TOOLCHAIN_ID}-${REGISTRY_URL}"
-
-    echo -e "Checking for presence of ${IMAGE_PULL_SECRET_NAME} imagePullSecret for this toolchain"
-    if ! kubectl get secret "${IMAGE_PULL_SECRET_NAME}" --namespace "${ZAP_CLUSTER_NAMESPACE}"; then
-      echo -e "${IMAGE_PULL_SECRET_NAME} not found in ${ZAP_CLUSTER_NAMESPACE}, creating it"
-      # for Container Registry, docker username is 'token' and email does not matter
-      kubectl --namespace "${ZAP_CLUSTER_NAMESPACE}" create secret docker-registry "${IMAGE_PULL_SECRET_NAME}" --docker-server="${REGISTRY_URL}" --docker-password="${IBMCLOUD_API_KEY}" --docker-username=iamapikey --docker-email=a@b.com
-    else
-      echo -e "Namespace ${ZAP_CLUSTER_NAMESPACE} already has an imagePullSecret for this toolchain."
-    fi
-    if [ -z "${KUBERNETES_SERVICE_ACCOUNT_NAME}" ]; then KUBERNETES_SERVICE_ACCOUNT_NAME="default" ; fi
-      SERVICE_ACCOUNT=$(kubectl get serviceaccount "${KUBERNETES_SERVICE_ACCOUNT_NAME}"  -o json --namespace "${ZAP_CLUSTER_NAMESPACE}" )
-    if ! echo "${SERVICE_ACCOUNT}" | jq -e '. | has("imagePullSecrets")' > /dev/null ; then
-      kubectl patch --namespace "${ZAP_CLUSTER_NAMESPACE}" serviceaccount/"${KUBERNETES_SERVICE_ACCOUNT_NAME}" -p '{"imagePullSecrets":[{"name":"'"${IMAGE_PULL_SECRET_NAME}"'"}]}'
-    else
-      if echo "${SERVICE_ACCOUNT}" | jq -e '.imagePullSecrets[] | select(.name=="'"${IMAGE_PULL_SECRET_NAME}"'")' > /dev/null ; then 
-        echo -e "Pull secret already found in ${KUBERNETES_SERVICE_ACCOUNT_NAME} serviceAccount"
-      else
-        echo "Inserting toolchain pull secret into ${KUBERNETES_SERVICE_ACCOUNT_NAME} serviceAccount"
-        kubectl patch --namespace "${ZAP_CLUSTER_NAMESPACE}" serviceaccount/"${KUBERNETES_SERVICE_ACCOUNT_NAME}" --type='json' -p='[{"op":"add","path":"/imagePullSecrets/-","value":{"name": "'"${IMAGE_PULL_SECRET_NAME}"'"}}]'
-      fi
-    fi
-  fi
-}
-
 getAPIDeploymentFile() {
   echo "=========================================================="
   mkdir -p zap-scan
@@ -264,4 +225,36 @@ spec:
 
 EOF
   DEPLOYMENT_FILE=zap-scan/deployment_ui.yaml
+}
+
+
+getZapEvidenceStatus() {
+  local reportfile="$1"
+  local ui_scan
+  local status="success"
+  local alertCount="0"
+
+  echo "Getting evidence status from ZAP results..." >&2
+
+  ui_scan="$(get_env zap-ui-scan "")"
+
+  if [ "${ui_scan}" == "true" ]; then
+    # just count the objects in the report array
+    alertCount="$(jq -r 'length' "${reportfile}")"
+  else
+    # collect all "alerts" from each method & site
+    # into a single array form reportfile
+    # and count it
+    alertCount="$(jq -r '[ . | with_entries( select(.key != "scan_id" ) )
+      | .[].site[].alerts[] ]
+      | length' "${reportfile}")"
+  fi
+
+  echo "Found ${alertCount} alerts" >&2
+
+  if [ "${alertCount}" != "0" ]; then
+    status="failure"
+  fi
+
+  printf "%s" "${status}"
 }

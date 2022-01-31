@@ -1,19 +1,30 @@
 #!/usr/bin/env bash
 # saved in a file called reportfile. delete after processing is complete
 # eg 'cat ${REPORTFILE}'
-# no recommended to log the report dues to size 
+# no recommended to log the report dues to size
 
 artifact="app-image"
+
 type="owasp-zap"
 if [ "${RUN_UI_SCAN}" = "true" ]; then
-    type="owasp-zap-ui"
+  type="owasp-zap-ui"
 fi
 
-# parameter defaults ZAP_EVIDENCE_TYPE & ZAP_STATUS_TYPE set in setup script
-collect-evidence \
+evidence_params=(
   --tool-type "$type" \
   --evidence-type "${ZAP_EVIDENCE_TYPE}" \
   --asset-type "artifact" \
   --asset-key "${artifact}" \
-  --status "${ZAP_STATUS_TYPE}" \
-  --attachment "${WORKSPACE}/${REPORTFILE}"
+  --status "${ZAP_STATUS_TYPE}"
+)
+
+# attach reportfile if it exists
+if [ -s "${WORKSPACE}/${REPORTFILE}" ]; then
+  evidence_params+=(
+    --attachment "${WORKSPACE}/${REPORTFILE}"
+  )
+fi
+
+# parameter defaults ZAP_EVIDENCE_TYPE & ZAP_STATUS_TYPE set in setup script
+collect-evidence "${evidence_params[@]}"
+
