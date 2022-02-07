@@ -143,7 +143,7 @@ list_repos | while IFS= read -r repo ; do
   # export results
   echo "$PROJECT_ISSUES" | jq '.' > "${SONAR_DIR}/app_issues"
   echo "$PROJECT_STATUS" | jq '.' > "${SONAR_DIR}/app_quality_status"
-  jq -s add "${SONAR_DIR}/app_issues"  "${SONAR_DIR}/app_quality_status" > "${SONAR_DIR}/app_issues_and_quality_status"
+  
   #
   # store result and attachment for asset-based evidence locker
   #
@@ -154,22 +154,16 @@ list_repos | while IFS= read -r repo ; do
     --asset-key "${repo}"
   )
 
-  #if [ -s "${SONAR_DIR}/app_issues" ]; then
-  #  save_result static-scan "${SONAR_DIR}/app_issues"
-  #  evidence_params+=(
-  #    --attachment "${SONAR_DIR}/app_issues"
-  #  )
-  #fi
-  #if [ -s "${SONAR_DIR}/app_quality_status" ]; then
-  #  save_result static-scan "${SONAR_DIR}/app_quality_status"
-  #  evidence_params+=(
-  #    --attachment "${SONAR_DIR}/app_quality_status"
-  #  )
-  #fi
   if [ -s "${SONAR_DIR}/app_issues" ]; then
-    save_result static-scan "${SONAR_DIR}/app_issues_and_quality_status"
+    save_result static-scan "${SONAR_DIR}/app_issues"
     evidence_params+=(
-      --attachment "${SONAR_DIR}/app_issues_and_quality_status"
+      --attachment "${SONAR_DIR}/app_issues"
+    )
+  fi
+  if [ -s "${SONAR_DIR}/app_quality_status" ]; then
+    save_result static-scan "${SONAR_DIR}/app_quality_status"
+    evidence_params+=(
+      --attachment "${SONAR_DIR}/app_quality_status"
     )
   fi
 
