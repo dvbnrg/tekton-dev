@@ -29,7 +29,7 @@ mv "${TEMP_DEPLOYMENT_FILE}" "${DEPLOYMENT_FILE}"
 
 
 #Portieris is not compatible with image name containing both tag and sha. Removing the tag
-IMAGE="${IMAGE%%:*}@${IMAGE#*"@"}"
+IMAGE="${IMAGE#*"@"}"
 sed -i "s~^\([[:blank:]]*\)image:.*$~\1image: ${IMAGE}~" ${DEPLOYMENT_FILE}
 
 DEPLOYMENT_DOC_INDEX=$(yq read --doc "*" --tojson $DEPLOYMENT_FILE | jq -r 'to_entries | .[] | select(.value.kind | ascii_downcase=="deployment") | .key')

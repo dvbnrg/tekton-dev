@@ -50,19 +50,15 @@ get-icr-region() {
 # add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
 # apt-get update && apt-get install docker-ce-cli
 
-set +e
-REPOSITORY="$(cat /config/repository)"
-set -e
-if [[ "${REPOSITORY}" ]]; then
+if [[ -s "/config/repository" ]]; then
+  REPOSITORY="$(cat /config/repository)"
   IMAGE_NAME=$(basename $REPOSITORY .git)
 else
   IMAGE_NAME="$(cat /config/app-name)"
 fi
 IMAGE_TAG="$(date +%Y%m%d%H%M%S)-$(cat /config/git-branch)-$(cat /config/git-commit)"
 
-BREAK_GLASS=$(cat /config/break_glass || echo "")
-
-if [[ -n "$BREAK_GLASS" ]]; then
+if [[ -f "/config/break_glass" ]]; then
   ARTIFACTORY_URL="$(jq -r .parameters.repository_url /config/artifactory)"
   ARTIFACTORY_REGISTRY="$(sed -E 's~https://(.*)/?~\1~' <<<"$ARTIFACTORY_URL")"
   ARTIFACTORY_INTEGRATION_ID="$(jq -r .instance_id /config/artifactory)"

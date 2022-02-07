@@ -16,7 +16,23 @@ test:
     cd ../"$(load_repo app-repo path)"
     npm install
     npm ci
-    npm test
+    # save exit code for old evidence collection
+    exit_code=0
+    npm test || exit_code=$?
+    
+    # save status for new evidence collection
+    status="success"
+    if [ "$exit_code" != "0" ]; then
+      status="failure"
+    fi
+    
+    collect-evidence \
+      --tool-type "jest" \
+      --status "$status" \
+      --evidence-type "com.ibm.unit_tests" \
+      --asset-type "repo" \
+      --asset-key "app-repo"
+    exit $exit_code
 
 static-scan:
   dind: true
@@ -77,8 +93,24 @@ acceptance-test:
     #!/usr/bin/env bash
     npm install
     npm ci
-    export APP_URL=$(cat ../app-url)
-    npm run acceptance-test
+    export APP_URL=$(cat ../app-url)    
+    # save exit code for old evidence collection
+    exit_code=0
+    npm run acceptance-test || exit_code=$?
+    
+    # save status for new evidence collection
+    status="success"
+    if [ "$exit_code" != "0" ]; then
+      status="failure"
+    fi
+    
+    collect-evidence \
+      --tool-type "jest" \
+      --status "$status" \
+      --evidence-type "com.ibm.acceptance_tests" \
+      --asset-type "repo" \
+      --asset-key "app-repo"
+    exit $exit_code    
 
 release:
   abort_on_failure: false

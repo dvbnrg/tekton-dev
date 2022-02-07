@@ -147,8 +147,36 @@ while IFS= read -r artifact; do
   
   # store signatures, or just an empty file
   signature="$(cat "${IMAGE_SIGN_DIR}/${name}_signature" 2> /dev/null || echo "")"
-  save_result sign-artifact "${IMAGE_SIGN_DIR}/${name}_signature"
-  
+  #
+  # store result and attachment for asset-based evidence locker
+  #
+  evidence_params=(
+    --tool-type "image-signing" \
+    --evidence-type "com.ibm.cloud.image_signing" \
+    --asset-type "artifact" \
+    --asset-key "${name}"
+  )
+
+  if [ $exit_code != 0 ]; then
+    status="failure"
+    printf "For further information check the documentation: https://cloud.ibm.com/docs/devsecops?topic=devsecops-cd-devsecops-ci-pipeline#cd-devsecops-pipeline-artifactscan\n" >&2
+    evidence_params+=(
+      --status "failure"
+    )
+  else
+    status="success"
+    # store signatures, or just an empty file
+    save_result sign-artifact "${IMAGE_SIGN_DIR}/${name}_signature"
+    evidence_params+=(
+      --status "success" \
+      --attachment "${IMAGE_SIGN_DIR}/${name}_signature"
+    )
+  fi
+
+  collect-evidence "${evidence_params[@]}"
+
+  echo $status >> "${IMAGE_SIGN_DIR}/sign_statuses"
+
   if [ "$USE_PIPELINECTL" == "true" ]; then
     save_artifact "$name" "signature=${signature}"
     echo -e "$signature\n\n" >> "${WORKSPACE}/artifact-signature"
