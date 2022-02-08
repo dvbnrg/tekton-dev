@@ -6,11 +6,6 @@ setupNamespace
 
 getAPIDeploymentFile
 
-# This block can be removed if zap images get public ICR hosting. Pull secret wont be required
-# FIND_ICR=$(echo "${ZAP_API_IMAGE}" | grep "${ICR_PATTERN}")
-# if [ "${FIND_ICR}" ]; then
-#   setPullSecret "${ZAP_API_IMAGE}"
-# fi
 echo "=========================================================="
 echo "UPDATING manifest with image information"
 echo -e "Updating ${DEPLOYMENT_FILE} with image name: ${ZAP_API_IMAGE}"

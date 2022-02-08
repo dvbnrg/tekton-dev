@@ -92,7 +92,7 @@ prepareUIData() {
   
   #prepare directory structure for scan => uiscripts.zip/uiscripts/files
   mkdir /tmp/uiscripts
-  cp ./* /tmp/uiscripts
+  cp -r ./* /tmp/uiscripts
   cd /tmp || exit
   zip -r "${ZIP_FILE}" uiscripts/*
   cd "${STARTING_DIR}" || exit
