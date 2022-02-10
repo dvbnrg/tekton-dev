@@ -4,8 +4,14 @@ setup:
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi@sha256:d59863621d3ba1b9bd47f76950c751e842405f9c303d0d4d4298d964b664ee85
   script: |
     #!/usr/bin/env bash
-
-    source scripts/code_setup.sh
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+      trap env EXIT
+      env
+      set -x
+    fi
+    if [[ "$pipeline_namespace" == *"pr"* ||  "$pipeline_namespace" == *"ci"* ]]; then
+      source scripts/code_setup.sh
+    fi  
 
 test:
   abort_on_failure: false
@@ -75,17 +81,6 @@ deploy:
     source scripts/deploy_setup.sh
     source scripts/deploy.sh
 
-sign-artifact:
-  abort_on_failure: false
-  image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0@sha256:e9d8e354668ba3d40be2aaee08298d2aa7f0e1c8a1829cca4094ec93830e3e6a
-  script: |
-      #!/usr/bin/env bash
-      STAGE_DIND="true"
-      STAGE_ABORT_ON_FAILURE="false"
-      STAGE_IMAGE_PULL_POLICY="IfNotPresent"
-
-      source scripts/sign_image.sh
-
 acceptance-test:
   abort_on_failure: false
   image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi@sha256:d59863621d3ba1b9bd47f76950c751e842405f9c303d0d4d4298d964b664ee85
@@ -119,14 +114,6 @@ release:
     #!/usr/bin/env bash
 
     source scripts/release.sh
-
-scan-artifact:
-  abort_on_failure: false
-  image: icr.io/continuous-delivery/pipeline/pipeline-base-ubi@sha256:d59863621d3ba1b9bd47f76950c751e842405f9c303d0d4d4298d964b664ee85
-  script: |
-    #!/usr/bin/env bash
-
-    source scripts/va_scan.sh
 
 dynamic-scan:
   dind: true 
