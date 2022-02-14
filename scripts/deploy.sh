@@ -73,7 +73,7 @@ else
       for ITER in {1..30}
       do
         APPURL=$(kubectl get ing ${service_name} --namespace "$IBMCLOUD_IKS_CLUSTER_NAMESPACE" -o json | jq -r .status.loadBalancer.ingress[0].ip)
-        if [ -z  "${APPURL}"  ]; then 
+        if [ -z  "${APPURL}"  ] || [[  "${APPURL}" = "null"  ]]; then 
            echo "Waiting for the application url from ingress...."
            sleep 2
         else
